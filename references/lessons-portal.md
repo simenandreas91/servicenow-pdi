@@ -1,0 +1,24 @@
+# Service Portal and Employee Center Lessons
+
+- Scoped Service Portal widget server scripts cannot assume OOTB/global helpers are directly visible. Prefer `global.HelperName` when calling global Script Includes such as `KBViewModel`, and keep a fallback only when it is safe. If the helper invokes restricted internals, remove that path instead of fighting scope restrictions.
+- Creating `kb_knowledge` demo articles through Table API may leave `workflow_state=draft` even when the payload sends `published`, because Knowledge business logic can override state transitions. For throwaway search test data in the PDI, a constrained Xplore script with `setWorkflow(false)` can set `workflow_state=published`, `published`, `valid_to`, and `active` after creation.
+- Do not call APIs that are blocked in scoped applications from widget server scripts, such as `GlideAccessibility.isEnabled()`. Default conservatively or use data already available to the widget.
+- Treat OOTB Knowledge view-count behavior with care in scoped widgets. Previewing an article inside a custom widget should not necessarily call `KBViewModel().increaseKBView()` or queue `kb.view`, because those paths can trigger restricted global functions.
+- For Service Portal client scripts, use `api.controller = function(...) { ... };` rather than a bare anonymous function. For link scripts, use `function link(scope, element, attrs, controller) { ... };`.
+- OOTB Service Portal child widgets can add Bootstrap tooltip attributes such as `title`, `data-toggle="tooltip"`, and `data-original-title`. When a wrapper redesign should not show hover help text, remove those attributes in the wrapper link function after child render, and use a `MutationObserver` if the child widget can rerender.
+- When replacing an OOTB search widget with a custom engine, keep record-producer behavior isolated in the cloned widget where possible. Add contextual fallback/synonym behavior there first, so standard portal search remains stable.
+- Record-producer contextual search receives natural user sentences, not deliberate search queries. Exact engine matching may work for portal search but still need conservative fallbacks for phrases such as `jobbe hjemmefra` or `configure router`.
+- Avoid broad fallback tokens such as `all`, `alle`, and `for`. Require fallback matches to be visible in title, snippet, category, KB name, or number.
+- In scoped widgets, avoid keeping AI Search/AISA compatibility code if the custom widget intentionally uses a different search engine. OOTB AISA helpers may be unavailable in scope.
+- For widget options, live `sp_instance.widget_parameters` can contain values not exposed in `sp_widget.option_schema`. Verify both when logic depends on `options.<name>`.
+- For Topic Content rollup, `content_displayed_from` must use `Current topic only` or `Current topic and all child topics`.
+- For portal typography, inspect `sp_theme.css_variables` before changing attached CSS includes. Later Bootstrap/EC variable blocks usually win.
+- Service Portal headers (`sp_header_footer`) can carry CSS that overrides theme typography. Remove text typography overrides when the theme should be the master, but preserve icon-font family declarations when pseudo-icons depend on them.
+- Employee Center theme CSS includes can bypass `$font-size-base` with compiled global rules such as `body { font-size: 1.6rem; }`. Prefer a theme-specific include or cloned stylesheet when only one portal should change.
+- For Employee Center header desktop glyph links, align icon-and-label stacks against avatar/bell controls with the same vertical control box, for example `min-height: 60px` plus flex centering.
+- Header badge colors may be widget-local SCSS defaults such as `$ec-header-badge-bg: #FF9E1B !default;`. Define the variable in the theme when color should be brand-controlled; use inline-flex centering for badge layout.
+- For branded Vår Energi widgets, put reusable brand tokens such as `$ve-blue`, `$ve-focus`, `$ve-text`, and `$ve-link` in `sp_theme.css_variables`, then let widget CSS declare `!default` fallbacks.
+- Blurry-looking Vår Energi portal widget text is often CSS clarity, not font loading. Check old brand variables, hard-coded colors, muted `rgba()`, gradients, heavy shadows, and hard `700`/`800` weights before changing markup.
+- Global Service Portal widget edits are captured by the current Global update set preference. Verify target update set before writes; if capture lands in Default, move the latest customer update to the intended update set.
+- Vår Energi website-style pill links can use white/default state with dark border/text and black hover/focus state with white text.
+- Vår Energi website-style navigation cards can use large soft-blue rectangular tiles with black text and a simple bright-blue right arrow; avoid unnecessary descriptions, counters, and generic glyphs.

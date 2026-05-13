@@ -1,0 +1,4 @@
+interface:
+  display_name: "ServiceNow PDI"
+  short_description: "Design, implement, and verify ServiceNow changes in Simen's PDI with OOTB-first analysis."
+  default_prompt: "Use the ServiceNow PDI skill to inspect the instance, check OOTB options first, implement narrow ServiceNow artifacts through the safest available helpers, verify update-set capture and behavior, and report tests plus rollback notes."
