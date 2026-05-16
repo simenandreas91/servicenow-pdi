@@ -70,6 +70,8 @@ Load `references/development.md` when the compact workflow is not enough, especi
 
 For HRSD Lifecycle Event, Journey Designer, HR Service, or Flow activity work, load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good Flow activity pattern, update-set split rules, and layered test sequence for subflow/action Script step integrations.
 
+For Platform Analytics dashboard work, load `references/lessons-platform-analytics.md` before creating or changing `par_dashboard` records, widgets, tabs, canvases, visibility, permissions, or dashboard metadata. It contains the fast dashboard skeleton, widget JSON pattern, known macroponent IDs, and update-set pitfalls.
+
 For the FFI Personellsikkerhet app (`x_personellsikkerh`), load `references/lessons-personellsikkerhet.md` before changing records, notifications, scheduled jobs, or process logic.
 
 ## OOTB-First Decision Process
@@ -323,6 +325,7 @@ Escalate manual steps when the task requires Store/plugin installation, MID Serv
 - `references/vaar-energi-design.md`: Vaar Energi portal design, theming, widgets, headers.
 - `references/integrations.md`: outbound REST, SAP SuccessFactors, public API practice integrations.
 - `references/hrsd-lifecycle.md`: HR Services created with Lifecycle Event / Journey Designer.
+- `references/lessons-platform-analytics.md`: Platform Analytics dashboards, `par_dashboard` skeleton, widget `component_props`, macroponent IDs, and fast verification patterns.
 - `references/now-assist.md`: Now Assist, Now Assist for HRSD, Now Assist Skill Kit, AI Search Genius Results, model providers, and privacy/safety controls.
 - `references/snprotips.md`: secondary/community notes from SN Pro Tips for ServiceNow development pitfalls, performance, debugging, update sets, catalog/portal, and practical utilities.
 - `references/examples.md`: longer Table API/Xplore command examples.
@@ -338,6 +341,8 @@ Escalate manual steps when the task requires Store/plugin installation, MID Serv
 Core tables: `sys_user`, `sys_scope`, `sys_user_preference`, `sys_dictionary`, `sys_db_object`, `sys_properties`, `sys_plugins`, `sys_update_set`, `sys_update_xml`, `rm_story`, `sys_script`, `sys_script_include`, `sys_ui_policy`, `sys_ui_policy_action`, `sys_script_client`, `sysauto_script`, `sysevent_register`, `sysevent_email_action`, `sys_security_acl`, `sys_hub_flow`, `sys_hub_action_type_definition`.
 
 Portal/workspace tables: `sp_widget`, `sp_instance`, `sp_page`, `sp_portal`, `sp_theme`, `sp_header_footer`, `sys_ux_app_config`, `sys_ux_list_menu_config`, `sys_ux_list_category`, `sys_ux_list`, `sys_declarative_action_assignment`, `sys_declarative_action_payload_definition`, `sys_declarative_action_model_definition`, `sys_ux_action_config`, `sys_ux_form_action`, `sys_ux_form_action_layout`, `sys_ux_form_action_layout_group`, `sys_ux_form_action_layout_item`, `sys_ux_addon_event_mapping`, `sys_ux_macroponent`, `sys_ux_app_route`.
+
+Platform Analytics dashboard tables: `par_dashboard`, `par_dashboard_tab`, `par_dashboard_canvas`, `par_dashboard_widget`, `par_dashboard_user_metadata`, `par_dashboard_permission`, `par_dashboard_visibility`, `par_visualization`, `par_component`, `sys_ux_macroponent`.
 
 HRSD lifecycle tables: `sn_hr_core_service`, `sn_hr_core_template`, `sn_hr_le_type`, `sn_jny_journey_config`, `sn_hr_le_activity_set`, `sn_hr_le_activity`, `sn_hr_le_activity_field_mapping`, `sc_cat_item_producer`, `item_option_new`, `question_choice`, `sn_doc_html_template`.
 
