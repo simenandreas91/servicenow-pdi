@@ -68,7 +68,7 @@ For a ServiceNow story, bug, enhancement, or technical task:
 
 Load `references/development.md` when the compact workflow is not enough, especially for story-state handling, complex scripts, Business Rules, Script Includes, update-set edge cases, or Xplore/background patterns.
 
-For HRSD Lifecycle Event, Journey Designer, HR Service, approval activity, or Flow activity work, load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good approval and Flow activity patterns, update-set split rules, and layered test sequence for approvals/subflow/action Script step integrations.
+For HRSD HR Service, Lifecycle Event, Journey Designer, activity type, HR task type, HR template, approval activity, or Flow activity work, load `references/hrsd-development-guide.md` first. For detailed Journey implementation patterns, also load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good approval and Flow activity patterns, update-set split rules, and layered test sequence for approvals/subflow/action Script step integrations.
 
 For new HRSD HR Service design or COE/table selection, load `references/hrsd-coe-selection.md` before choosing `sn_hr_core_service.service_table`, templates, record producers, or topic categories. It contains the COE decision tree, base table guide, PDI field inventory, and cautions for custom COE fields.
 
@@ -328,6 +328,7 @@ Escalate manual steps when the task requires Store/plugin installation, MID Serv
 - `references/tables.md`: table-specific notes, especially Service Portal records.
 - `references/vaar-energi-design.md`: Vaar Energi portal design, theming, widgets, headers.
 - `references/integrations.md`: outbound REST, SAP SuccessFactors, public API practice integrations.
+- `references/hrsd-development-guide.md`: concise HRSD configuration model, key tables, Lifecycle Event activity behavior, activity type/task type usage, demo build pattern, and common pitfalls.
 - `references/hrsd-lifecycle.md`: HR Services created with Lifecycle Event / Journey Designer.
 - `references/hrsd-coe-selection.md`: HRSD COE/case table selection for new HR Services, topic/category alignment, and COE field/customization cautions.
 - `references/lessons-platform-analytics.md`: Platform Analytics dashboards, `par_dashboard` skeleton, widget `component_props`, macroponent IDs, and fast verification patterns.
@@ -351,7 +352,7 @@ Platform Analytics dashboard tables: `par_dashboard`, `par_dashboard_tab`, `par_
 
 HRSD COE/case tables: `sn_hr_core_case`, `sn_hr_core_case_total_rewards`, `sn_hr_core_case_payroll`, `sn_hr_core_case_talent_management`, `sn_hr_core_case_workforce_admin`, `sn_hr_core_case_operations`, `sn_hr_le_case`, `sn_hr_core_case_benefits`, `sn_hr_core_case_compensation`, `sn_hr_core_case_corporate_communication`, `sn_hr_core_case_global_mobility`.
 
-HRSD lifecycle tables: `sn_hr_core_service`, `sn_hr_core_template`, `sn_hr_le_type`, `sn_jny_journey_config`, `sn_hr_le_activity_set`, `sn_hr_le_activity`, `sn_hr_le_activity_field_mapping`, `sc_cat_item_producer`, `item_option_new`, `question_choice`, `sn_doc_html_template`.
+HRSD lifecycle tables: `sn_hr_core_service`, `sn_hr_core_template`, `sn_hr_core_task`, `sn_hr_core_criteria`, `sn_hr_le_type`, `sn_jny_journey_config`, `sn_hr_le_activity_set`, `sn_hr_le_activity`, `sn_hr_le_activity_field_mapping`, `sc_cat_item_producer`, `item_option_new`, `question_choice`, `sn_doc_html_template`.
 
 Integration tables: `sys_rest_message`, `sys_rest_message_fn`, `sys_rest_message_headers`, `sys_rest_message_fn_headers`, `sys_rest_message_fn_param_defs`, `sys_outbound_http_log`, `sys_alias`, `sys_connection`, `http_connection`, `sys_auth_profile_basic`, `oauth_entity_profile`.
 
@@ -369,6 +370,7 @@ Known IDs:
 
 - **Incident routing**: inspect assignment rules, data lookup, groups, dictionary choices, existing Business Rules, and flows; prefer assignment/data lookup configuration before scripting; test with throwaway incidents and expected groups.
 - **Catalog item fulfillment**: inspect catalog item variables, UI policies, client scripts, fulfillment flow, step-based fulfillment registry, approvals, and tasks; prefer Flow Designer/catalog fulfillment config; test request submission and generated RITM/tasks.
+- **HRSD HR Service design**: load `references/hrsd-development-guide.md`; load `references/hrsd-coe-selection.md` before choosing the service table, topic category/detail, template table, or producer table; for Lifecycle Event/Journey work also load `references/hrsd-lifecycle.md`. Verify service/table/topic/template alignment and generated case behavior.
 - **ACL/security visibility**: inspect roles, groups, table/field ACLs, user criteria, before-query rules, and UI hiding; verify with role-aware Table API and `GlideRecordSecure`; document least-privilege changes.
 - **Workspace change**: inspect target workspace app config, lists, declarative actions, form views, and existing client scripts; prefer declarative UX records; test in Workspace and classic UI if both are in scope.
 - **Portal/Employee Center widget**: inspect page, instance, widget options, theme, and OOTB widget behavior; prefer options/composition before cloning; test responsive rendering and scoped server script behavior.

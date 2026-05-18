@@ -5,6 +5,7 @@ Use this for HR Services built through Lifecycle Event / Journey Designer. A man
 ## Core Model
 
 - Entry point HR Service: `sn_hr_core_service` with `fulfillment_type=journey`.
+- Parent journey cases usually use `sn_hr_le_case`. Generated child HR Services should use the concrete COE case table that owns the work, such as Payroll, Total Rewards, Talent Management, Workforce Administration, or Operations. If the parent/child table choice is not already fixed, load `references/hrsd-coe-selection.md` before creating Journey metadata.
 - Lifecycle definition: `sn_hr_le_type`.
 - Visual journey configuration: `sn_jny_journey_config`.
 - UI columns / stages: `sn_hr_le_activity_set`.
@@ -50,16 +51,17 @@ Where to look first:
 
 ## Creation Order
 
-1. Create the intake record producer (`sc_cat_item_producer`) on the target HR case table, usually a `sn_hr_core_case*` table.
-2. Create producer variables (`item_option_new`) and choices (`question_choice`).
-3. Create the base case template (`sn_hr_core_template`) used by the HR Service.
-4. Create the lifecycle type (`sn_hr_le_type`).
-5. Create the journey config (`sn_jny_journey_config`) linked to the lifecycle type.
-6. Create the journey HR Service (`sn_hr_core_service`) linked to producer, template, lifecycle type, and journey config.
-7. Create activity sets (`sn_hr_le_activity_set`) for each Lifecycle Event column.
-8. Create activities (`sn_hr_le_activity`) inside each set.
-9. Create any supporting HR templates, child HR services, document templates, catalog item references, or approval references.
-10. Create activity field mappings (`sn_hr_le_activity_field_mapping`) for activities that generate cases, requests, or tasks.
+1. Confirm the parent journey table and any child HR Service COE tables. Use `references/hrsd-coe-selection.md` when the COE, topic category/detail, or child service table is uncertain.
+2. Create the intake record producer (`sc_cat_item_producer`) on the target HR case table, usually `sn_hr_le_case` for a journey parent or a concrete `sn_hr_core_case*` table for a child service.
+3. Create producer variables (`item_option_new`) and choices (`question_choice`).
+4. Create the base case template (`sn_hr_core_template`) used by the HR Service.
+5. Create the lifecycle type (`sn_hr_le_type`).
+6. Create the journey config (`sn_jny_journey_config`) linked to the lifecycle type.
+7. Create the journey HR Service (`sn_hr_core_service`) linked to producer, template, lifecycle type, and journey config.
+8. Create activity sets (`sn_hr_le_activity_set`) for each Lifecycle Event column.
+9. Create activities (`sn_hr_le_activity`) inside each set.
+10. Create any supporting HR templates, child HR services, document templates, catalog item references, or approval references.
+11. Create activity field mappings (`sn_hr_le_activity_field_mapping`) for activities that generate cases, requests, or tasks.
 
 Prefer cloning or templating a known-good sample before creating these from scratch. The UI writes many required defaults that are easy to miss.
 
