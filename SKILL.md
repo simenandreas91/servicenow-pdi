@@ -70,6 +70,8 @@ Load `references/development.md` when the compact workflow is not enough, especi
 
 For HRSD Lifecycle Event, Journey Designer, HR Service, approval activity, or Flow activity work, load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good approval and Flow activity patterns, update-set split rules, and layered test sequence for approvals/subflow/action Script step integrations.
 
+For new HRSD HR Service design or COE/table selection, load `references/hrsd-coe-selection.md` before choosing `sn_hr_core_service.service_table`, templates, record producers, or topic categories. It contains the COE decision tree, base table guide, PDI field inventory, and cautions for custom COE fields.
+
 HR approval notification lesson: service-specific initial approval emails can usually be handled with an additive `sysapproval_approver` notification on event `approval.inserted`, condition `state=requested`, an HR Service/Journey-specific condition, and recipient `approver`. If it should replace OOTB `Approval Request`, give the custom notification a higher weight and verify the generic email is ignored for the same approval.
 
 For Platform Analytics dashboard work, load `references/lessons-platform-analytics.md` before creating or changing `par_dashboard` records, widgets, tabs, canvases, visibility, permissions, or dashboard metadata. It contains the fast dashboard skeleton, widget JSON pattern, known macroponent IDs, and update-set pitfalls.
@@ -327,6 +329,7 @@ Escalate manual steps when the task requires Store/plugin installation, MID Serv
 - `references/vaar-energi-design.md`: Vaar Energi portal design, theming, widgets, headers.
 - `references/integrations.md`: outbound REST, SAP SuccessFactors, public API practice integrations.
 - `references/hrsd-lifecycle.md`: HR Services created with Lifecycle Event / Journey Designer.
+- `references/hrsd-coe-selection.md`: HRSD COE/case table selection for new HR Services, topic/category alignment, and COE field/customization cautions.
 - `references/lessons-platform-analytics.md`: Platform Analytics dashboards, `par_dashboard` skeleton, widget `component_props`, macroponent IDs, and fast verification patterns.
 - `references/now-assist.md`: Now Assist, Now Assist for HRSD, Now Assist Skill Kit, AI Search Genius Results, model providers, and privacy/safety controls.
 - `references/snprotips.md`: secondary/community notes from SN Pro Tips for ServiceNow development pitfalls, performance, debugging, update sets, catalog/portal, and practical utilities.
@@ -345,6 +348,8 @@ Core tables: `sys_user`, `sys_scope`, `sys_user_preference`, `sys_dictionary`, `
 Portal/workspace tables: `sp_widget`, `sp_instance`, `sp_page`, `sp_portal`, `sp_theme`, `sp_header_footer`, `sys_ux_app_config`, `sys_ux_list_menu_config`, `sys_ux_list_category`, `sys_ux_list`, `sys_declarative_action_assignment`, `sys_declarative_action_payload_definition`, `sys_declarative_action_model_definition`, `sys_ux_action_config`, `sys_ux_form_action`, `sys_ux_form_action_layout`, `sys_ux_form_action_layout_group`, `sys_ux_form_action_layout_item`, `sys_ux_addon_event_mapping`, `sys_ux_macroponent`, `sys_ux_app_route`.
 
 Platform Analytics dashboard tables: `par_dashboard`, `par_dashboard_tab`, `par_dashboard_canvas`, `par_dashboard_widget`, `par_dashboard_user_metadata`, `par_dashboard_permission`, `par_dashboard_visibility`, `par_visualization`, `par_component`, `sys_ux_macroponent`.
+
+HRSD COE/case tables: `sn_hr_core_case`, `sn_hr_core_case_total_rewards`, `sn_hr_core_case_payroll`, `sn_hr_core_case_talent_management`, `sn_hr_core_case_workforce_admin`, `sn_hr_core_case_operations`, `sn_hr_le_case`, `sn_hr_core_case_benefits`, `sn_hr_core_case_compensation`, `sn_hr_core_case_corporate_communication`, `sn_hr_core_case_global_mobility`.
 
 HRSD lifecycle tables: `sn_hr_core_service`, `sn_hr_core_template`, `sn_hr_le_type`, `sn_jny_journey_config`, `sn_hr_le_activity_set`, `sn_hr_le_activity`, `sn_hr_le_activity_field_mapping`, `sc_cat_item_producer`, `item_option_new`, `question_choice`, `sn_doc_html_template`.
 
