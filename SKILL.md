@@ -68,7 +68,9 @@ For a ServiceNow story, bug, enhancement, or technical task:
 
 Load `references/development.md` when the compact workflow is not enough, especially for story-state handling, complex scripts, Business Rules, Script Includes, update-set edge cases, or Xplore/background patterns.
 
-For HRSD Lifecycle Event, Journey Designer, HR Service, or Flow activity work, load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good Flow activity pattern, update-set split rules, and layered test sequence for subflow/action Script step integrations.
+For HRSD Lifecycle Event, Journey Designer, HR Service, approval activity, or Flow activity work, load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good approval and Flow activity patterns, update-set split rules, and layered test sequence for approvals/subflow/action Script step integrations.
+
+HR approval notification lesson: service-specific initial approval emails can usually be handled with an additive `sysapproval_approver` notification on event `approval.inserted`, condition `state=requested`, an HR Service/Journey-specific condition, and recipient `approver`. If it should replace OOTB `Approval Request`, give the custom notification a higher weight and verify the generic email is ignored for the same approval.
 
 For Platform Analytics dashboard work, load `references/lessons-platform-analytics.md` before creating or changing `par_dashboard` records, widgets, tabs, canvases, visibility, permissions, or dashboard metadata. It contains the fast dashboard skeleton, widget JSON pattern, known macroponent IDs, and update-set pitfalls.
 
