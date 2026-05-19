@@ -293,3 +293,80 @@ Suggested dashboards:
 - Accessibility: https://design.varenergi.no/91ba8068a/p/623382-accessibility
 - Buttons: https://design.varenergi.no/91ba8068a/p/0252d9-buttons
 - Links: https://design.varenergi.no/91ba8068a/p/551077-links
+
+## Vision & Validate Design Review
+
+Reviewed: 2026-05-19  
+Source document: `C:\Users\simen\Documents\Codex\ServiceNow\Design Document - Vision & Validate - Being Reviewed by Customer.docx`
+
+Use this section when converting Vår Energi design decisions into ServiceNow Agile stories. The document is a high-level solution design across Platform Foundation, HRSD, ITSM, Office Management, Employee Center Pro, and Technical Governance. It contains 930 paragraphs, 4 tables, and 3 embedded images. Layout rendering was not available locally because LibreOffice/Poppler were not installed, so this review is based on structured DOCX extraction.
+
+### Platform Foundation
+
+- Scope covers ITSM, HRSD, Office Management, Suppliers Hub, Entra ID, SSO, RBAC, notification framework, Integration Hub, basic CMDB/CSDM, SuccessFactors, Compendia, and Cegal.
+- Design principles: API-first integration, reusable Script Includes/subflows, separation of concerns, and configuration over customization.
+- Identity model: Entra ID is the primary IdP and identity source; SAML SSO with Entra; batch sync every 40 minutes; group-to-role mapping; MFA for non-Entra users.
+- Integration pattern: REST APIs through Integration Hub, async processing with queues/events, decoupled design, retry/error handling, and integration logging.
+- Employee Center is positioned as the one front door across HR, IT, and Office Management with search-first and knowledge-first behavior.
+
+### HRSD Story Inputs
+
+- Enable HR Core/HRSD foundation, HR Criteria, HR Case/Task forms, pop-up view, case lifecycle management, HR Agent Workspace, Employee Center HR services, Manager Hub, HR services, COEs, notifications, reporting, and governance.
+- For Vår Energi HR email notifications, use the `Vår Energi template` email template, which is linked to `Vår Energi Layout` and contains the Vår Energi logo/branding. In the DEV instance this is `sysevent_email_template` `1462e7ca918a3010f877b1d70a4d6a3d`, linked to `sys_email_layout` `9d3d6f8777823010f088a0e89e5a997f`. Use this template for newly created HR email notifications unless the story says otherwise. HR employee notification emails should be short alerts that send the user into ServiceNow/Employee Center through a mail-script-generated portal link; do not include agent comments/notes in the email body and do not create inbound email actions unless explicitly requested.
+- HR Agent Workspace should keep OOTB fields where possible, but include Manager on the at-a-glance card and one Category field for General HR cases.
+- General HR Inquiry should use the OOTB General Inquiry HR Service and record producer, expose it on Employee Center, route initially to HR Operations Tier 1, use standard notifications, and enable contextual search while users fill the description.
+- General HR Inquiry categories: Payroll, Vacation and Leave, Benefits and Rewards, Pension & Insurance, Onboarding, Offboarding, HR Systems/Access, Learning and Development, Recruitment and Internal Mobility, Travel & Expenses, Other.
+- Suggested HR assignment groups: Tier 1 - HR Operations, Tier 2 - HR Discipline Areas, HR - Workforce and organization, HR - Learning and development, HR - Reward, employee and industrial relations, HRIT - HR Tech Team, HR - Global Mobility.
+- HR General Inquiry SLA: 5 business days response time.
+- HR cases should automatically close 7 business days after a proposed solution if the employee does not respond. Send a proposed-solution notification first, a friendly reminder after 3 business days, then close with automatic close notes after 7 business days.
+- Manager Hub should be enabled for hiring/workforce planning content. It should be role-based for managers, reduce irrelevant content/widgets, include work anniversaries and birthdays in team configuration, and expose Position Change.
+- Position Change should be an HR Service and record producer exposed in Employee Center, with auto-assignment, standard notifications, and effective-date-driven crossboarding.
+- Crossboarding journey should be triggered from Position Change effective end date and split into old-role offboarding, new-role preboarding, and new-role onboarding. Tasks for HR, IT, Facilities, managers, employees, and other stakeholders are to be defined during construct.
+- Now Assist for HRSD should enable HR case summarization in HR Agent Workspace. Each summarization request consumes one assist transaction according to the design.
+- SuccessFactors integration is inbound to ServiceNow for HR Profile creation/update. Preferred starting point is file-based ingestion with validation, transformation, mapping, scheduling, and monitoring. API-based integration can replace it later if successful. Unique key for HR Profile mapping is still open.
+- If SuccessFactors sends an employee without an existing sys_user record, the design proposes creating the User before the HR Profile, but this conflicts with Entra as user master and needs a concrete governance decision.
+- Compendia integration is inbound to ServiceNow for HR knowledge from the Employee Handbook using a standard API. Compendia remains the authoritative source for that content.
+- HR knowledge strategy: ServiceNow is the HR knowledge front door, not necessarily the only repository. Separate internal HR knowledge and external employee/manager knowledge with role/user criteria.
+
+### ITSM Story Inputs
+
+- ITSM scope covers Incident, Major Incident, Problem, Major Problem, Change, Request, Knowledge, basic CMDB/CSDM, Suppliers Hub, AI/automation, Employee Center Pro, notifications, dashboards, and Cegal integration.
+- Incidents should use OOTB Incident/Major Incident. Resolved incidents auto-close after 7 days if no activity is registered.
+- End users report incidents through a "Something is not working" record producer in Employee Center Pro. It supports on-behalf-of, business service offering selection, free-text issue description, watch list, contextual search, and status/progress notifications.
+- Incident routing should use Business Service, Business Service Offering, and/or Business Application to route to the correct assignment group and supplier. Help Desk acts as fallback when automation cannot classify.
+- Problem and Change are backend-only and should not be exposed to end users. Problem and Change use OOTB models, service-based categorization/routing, and Vår Energi SLAs.
+- Change Management should support Standard, Normal, and Emergency models; standard change templates; CAB and ECAB setup; schedules and meeting cadence; training for Change Manager, CAB, and ECAB participants.
+- Request Management should use standard REQ/RITM, Employee Center catalog taxonomy, routing by Business Service/Offering, approval flows where needed, assignment/supplier routing, and Vår Energi SLAs. First release target is about 25 request forms.
+- SOW should stay OOTB for ITSM. Office Management gets a role-based custom home page and optimized list views.
+- Assignment groups should align to CSDM and follow `<Service Area> - <Business Service / Service Offering> - <Role or Team> - <Supplier if applicable>`.
+- ITSM Success Dashboard plugin `sn_sd_itsm` is the initial reporting approach, refined later based on feedback.
+- Suppliers Hub should be a custom integration application/layer between Vår Energi ServiceNow and supplier systems. Cegal is first supplier. It should send relevant ITSM tickets outbound, receive status/comments/resolution inbound, support inbound supplier records that affect Vår Energi services, normalize data, and use standardized APIs.
+- Now Assist for ITSM should support portal/end-user summaries on demand and agent/fulfiller summaries for Incidents, Requests, Problems, and Changes. Each summarization request consumes one assist transaction.
+
+### Office Management Story Inputs
+
+- Office Management uses ITSM Request Management and Knowledge Management through Employee Center Pro, not a separate custom process.
+- One REQ to one RITM is the recommended operating model for Office Management requests. Fulfillers work directly on RITMs.
+- IDM forms to review and potentially migrate: Building Office request, Report a building/office issue, Building department access, Report issue with Building security, Request for Canteen Refreshments for Meeting or Conference Room, Request Visitor with approval flow.
+- Submission channels: Employee self-service portal, Chat/Copilot/Now Assist, and Help Desk assisted support.
+- Office Management knowledge bases: internal facility knowledge for teams/fulfillers/agents, and end-user knowledge for all employees. Include travel information, office information, facility information, FAQs, procedures, and common resolutions.
+- SOW should be enhanced for Office Management with a custom role-based home page dashboard and list views for requests, requested items, and interactions scoped to relevant Office Management data.
+
+### Employee Center Pro And Governance
+
+- Employee Center Pro is the single unified entry point for services, inquiries, requests, journeys, and knowledge across HR, IT, and Office Management.
+- Design principles: end-user centricity, visible services with clear guidance, knowledge-first experience, and role-based relevance.
+- Suggested taxonomy: Join & Onboard; My tools, access & help; Pay, time & employment; Workplace, safety & facilities; IT for IT.
+- Use topic sites for limited/reference content. Use microsites when content volume is higher, multiple roles need guided structure, or richer context is needed.
+- Governance expectations: ARB/CAB decision forums, build/release guardrails, security/privacy controls, upgrade readiness, operational ownership, controlled DEV to TEST to PROD path, regression testing, rollback readiness, RBAC/ACL least privilege, audit/monitoring, naming standards, and upgrade execution gates.
+
+### Open Decisions To Track In Stories
+
+- Confirm exact HR Profile unique key for SuccessFactors mapping.
+- Decide whether ServiceNow may create sys_user records from SuccessFactors when Entra is the stated identity source of truth.
+- Confirm file-based versus API-based SuccessFactors integration path for first release.
+- Confirm Now Assist licensing/activation, cost governance, and exact capabilities per role/channel.
+- Confirm Cegal API capabilities, data contract, authentication, and which ITSM record types are in initial supplier integration scope.
+- Confirm initial list of around 25 ITSM request forms and the Office Management IDM forms to migrate.
+- Confirm customer-owned knowledge content readiness, ownership, approval workflow, and taxonomy.
+- Confirm benchmark opt-in for HR Success Dashboard case deflection analytics.

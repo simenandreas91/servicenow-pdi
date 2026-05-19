@@ -30,7 +30,9 @@ Helpers load credentials from the nearest workspace `.env`; active profile is `S
 
 Known profiles in `C:\Users\simen\Documents\Codex\ServiceNow\.env`:
 - `pdi`: Simen's PDI, `https://dev396302.service-now.com`
-- `other`: Vaar Energi test, `https://varenergitest.service-now.com`; Table API verified, Xplore unavailable/not accessible
+- `other`: Vaar Energi test/DEV, `https://varenergitest.service-now.com`; Table API verified; Xplore verified after Xplore: Developer Toolkit 5.02 was installed
+
+Vår Energi PROD is not a normal profile in `.env`, but Table API access has been verified with the same credentials as `other` by passing `-Instance 'https://varenergiprod.service-now.com'`. Treat PROD as read-only unless Simen explicitly asks otherwise. Vår Energi Agile stories normally live in PROD and are implemented first in DEV.
 
 When a shell has generic `SN_INSTANCE`/`SN_USER`/`SN_PASS` environment variables set, pass `-Profile pdi -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env'` to the helpers so the `pdi` profile is used consistently. Do not store passwords in this `SKILL.md`; keep secrets in the `.env` file or an OS credential store.
 
@@ -67,6 +69,8 @@ For a ServiceNow story, bug, enhancement, or technical task:
 10. Final response must include update set name/sys_id/scope, changed artifacts, verification, cleanup, rollback notes, assumptions, risks, and any manual steps.
 
 Load `references/development.md` when the compact workflow is not enough, especially for story-state handling, complex scripts, Business Rules, Script Includes, update-set edge cases, or Xplore/background patterns.
+
+For Vår Energi work, load `references/vaar-energi-lessons.md` and `references/vaar-energi-design.md` before implementing stories. These capture the PROD-to-DEV workflow, known sys_ids, update-set context, notification patterns, and design-document decisions learned from live Vår Energi sessions.
 
 For HRSD HR Service, Lifecycle Event, Journey Designer, activity type, HR task type, HR template, approval activity, or Flow activity work, load `references/hrsd-development-guide.md` first. For detailed Journey implementation patterns, also load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good approval and Flow activity patterns, update-set split rules, and layered test sequence for approvals/subflow/action Script step integrations.
 
