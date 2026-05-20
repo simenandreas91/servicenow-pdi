@@ -70,7 +70,7 @@ For a ServiceNow story, bug, enhancement, or technical task:
 
 Load `references/development.md` when the compact workflow is not enough, especially for story-state handling, complex scripts, Business Rules, Script Includes, update-set edge cases, or Xplore/background patterns.
 
-For Vår Energi work, load `references/vaar-energi-lessons.md` and `references/vaar-energi-design.md` before implementing stories. These capture the PROD-to-DEV workflow, known sys_ids, update-set context, notification patterns, and design-document decisions learned from live Vår Energi sessions.
+For Vår Energi work, load `references/vaar-energi-lessons.md` and `references/vaar-energi-design.md` before implementing stories. These capture the PROD-to-DEV workflow, known sys_ids, update-set context, batch update-set parenting, HRSD SLA patterns, notification patterns, mail-script link conventions, and design-document decisions learned from live Vår Energi sessions.
 
 For HRSD HR Service, Lifecycle Event, Journey Designer, activity type, HR task type, HR template, approval activity, or Flow activity work, load `references/hrsd-development-guide.md` first. For detailed Journey implementation patterns, also load `references/hrsd-lifecycle.md` before creating or changing metadata. It contains the known-good approval and Flow activity patterns, update-set split rules, and layered test sequence for approvals/subflow/action Script step integrations.
 
