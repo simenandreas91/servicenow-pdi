@@ -208,9 +208,11 @@ script_condition = current.canWrite() && current.state.canWrite() && current.u_o
 
 - Workspace action records for custom global table behavior may be Global, even when they render in SOW.
 - SOW form layouts often belong to app scopes such as Request Management for Service Operations Workspace.
+- Incident SOW action-bar records normally belong to Incident Management for Service Operations Workspace (`sn_sow_inc`, scope sys_id `49aff4bb733320103e366238edf6a70f`), not Global.
 - Split work by `sys_update_xml.application`:
   - Global update set for `sys_declarative_action_assignment`, `sys_ux_form_action`, and global action layout items.
   - SOW-scoped update set for SOW-owned `sys_ui_section` form layout updates.
+- Prefer the Table API helper for creating `sys_declarative_action_assignment`, `sys_ux_form_action`, and `sys_ux_form_action_layout_item` records after switching to the intended app/update set. Server-side GlideRecord inserts in some workspace tables can return null sys_ids or create unintended duplicate customer updates; if that happens, inspect live records and delete both the bad records and their `sys_update_xml` rows.
 - Form layout changes may not auto-capture. If the live layout changed but the update set is empty, force capture:
   ```powershell
   Save-ServiceNowCustomerUpdate.ps1 -Table sys_ui_section -SysId <section_sys_id> -UpdateSetSysId <update_set_sys_id>
@@ -234,6 +236,32 @@ For the RITM On Hold modal in Simen's PDI:
   - require write access to state, reason, and comments
 - Added `u_on_hold_reason` to the SOW RITM form layout after `state`.
 - Captured action records in Global and form layout in Request Management for Service Operations Workspace.
+
+## Incident On Hold SOW Example
+
+For Incident On Hold in Simen's PDI:
+
+- Existing state and reason fields were reused:
+  - `incident.state=3` means On Hold.
+  - `incident.hold_reason` stores the On hold reason.
+- Added hold reason choices on `incident.hold_reason`:
+  - `6 = Internal`
+  - `7 = External`
+- Reused server logic from both UI16 and Workspace through `IncidentOnHoldAjax.setOnHold`.
+- Created Workspace action records in `sn_sow_inc`:
+  - `sys_declarative_action_assignment`: `sow_incident_on_hold`
+  - `sys_ux_form_action`: `On Hold`
+  - `sys_ux_form_action_layout_item`: action bar item at order `95`
+- Used `g_modal.showFields(...)` with:
+  - `choice` field `hold_reason`
+  - `textarea` field `comment`
+- Include all intended Incident hold choices in the Workspace modal. Unlike UI16 `g:ui_choicelist`, Workspace inline choices do not automatically reflect `sys_choice`.
+- Visibility used:
+  ```text
+  record_conditions = active=true^stateNOT IN3,6,7,8
+  script_condition = current.canWrite() && current.state.canWrite() && current.hold_reason.canWrite() && current.comments.canWrite()
+  ```
+- Captured the shared choices/UI16/server records in Global and the SOW action records in `sn_sow_inc`, with the scoped set parented to the Global delivery set.
 
 ## Test Checklist
 
