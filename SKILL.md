@@ -140,6 +140,46 @@ Restore preferences:
   -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env'
 ```
 
+## Complete, Export, And Email Update Set
+
+Use this when Simen asks to finish an update set, export XML, and email it.
+
+1. Confirm Gmail access first when mail delivery is requested:
+   - Use the Gmail plugin/connector.
+   - Call the Gmail profile action first and tell Simen the connected account.
+   - If Gmail is unavailable, stop and ask Simen to reconnect/fix access.
+2. Inspect the update set before completing:
+
+```powershell
+& "$HOME/.codex/skills/servicenow-pdi/scripts/Get-ServiceNowUpdateSetSummary.ps1" `
+  -Profile pdi `
+  -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env' `
+  -UpdateSetSysId '<sys_update_set>'
+```
+
+3. If the summary is clean, complete and export with the helper:
+
+```powershell
+& "$HOME/.codex/skills/servicenow-pdi/scripts/Export-ServiceNowUpdateSetXml.ps1" `
+  -Profile pdi `
+  -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env' `
+  -UpdateSetSysId '<sys_update_set>' `
+  -Complete
+```
+
+4. The helper returns JSON with `path`, `update_set_name`, `update_count`, and `remote_update_set_sys_id`. Verify `root` is `unload`, `update_count` matches the summary, and the file exists.
+5. Send the email from Gmail:
+   - To: use Simen's requested recipient.
+   - Subject: exact update set name.
+   - Body: short note with update set name, sys_id, scope/application, and attached XML.
+   - Attach the helper's `path`.
+   - For Gmail connector attachment parameters, pass an array/list of absolute paths, not a single string.
+6. Final response: report Gmail account used, recipient, subject, update set state, XML path, update count, and Gmail sent message ID.
+
+Notes:
+- Direct HTTP calls to `export_update_set.do` may return `401` with Basic auth. Prefer `Export-ServiceNowUpdateSetXml.ps1`; it uses ServiceNow's `UpdateSetExport` server API through Xplore, then writes the generated `sys_remote_update_set` and `sys_update_xml` rows as a valid unload XML.
+- Do not mark an update set complete if the summary shows mixed scope, unexpected application, or noise unless Simen explicitly accepts it.
+
 ## Decision Ladder
 
 Check options in this order before creating custom artifacts:
