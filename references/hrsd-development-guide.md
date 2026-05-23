@@ -105,8 +105,8 @@ Use this pattern when the selected activity type is Employee or Fulfiller and th
 
 Practical encoded template fields by task type:
 - `hr_service`: set `hr_service=<sn_hr_core_service>` and create field mappings when a child case/request must inherit lifecycle case values.
-- `submit_catalog_item`: set `sc_cat_item=<sc_cat_item>`; map requested-for values if the request should target the subject person.
-- `submit_order_guide`: set `order_guide=<sc_cat_item_guide>`; use when the assignee must launch a bundle rather than one item.
+- `submit_catalog_item`: set `sc_cat_item=<sc_cat_item>`. To prefill catalog variables, create `sn_hr_le_activity_field_mapping` with `map_from_table=sn_hr_le_case`, `map_from_field=<case field>`, `map_to_table=task`, `map_to_field=variables`, and `map_to_variable=<item_option_new>`. Match data types, for example `subject_person` can map to a catalog variable that references `sys_user`.
+- `submit_order_guide`: set `order_guide=<sc_cat_item_guide>`; use when the assignee must launch a bundle rather than one item. Use the same variable mapping shape as catalog items when order-guide variables need lifecycle values.
 - `collect_Information`: set `employee_form=<sn_hr_core_employee_form>`.
 - `checklist`: set `hr_task_type=checklist`; add checklist items through the supported checklist model when individual item tracking matters.
 - `e_sign`: set `sn_esign_esignature_configuration=<sn_esign_configuration>` or the customer-supported e-signature configuration field.
@@ -118,6 +118,11 @@ Practical encoded template fields by task type:
 - `view_video`: set `url=<video or embed URL>`.
 - `action_url`: use an OOTB/vendor integration template with `integrating_system=<system>`; arbitrary new `action_url` templates may be blocked by Business Rule validation.
 - `create_JA_plan`: set `hr_task_type=create_JA_plan` and Journey Accelerator plan fields when required; `auto_create_plan=false` creates a manager-facing create/review action.
+
+Field mapping notes:
+- Use `map_to_table=sc_request` and `map_to_field=requested_for` when mapping to generated request fields.
+- Use `map_to_table=task`, `map_to_field=variables`, and `map_to_variable=<item_option_new sys_id>` when mapping to catalog item/order guide variables.
+- Validate type compatibility yourself before creating mappings. A reference case field such as `subject_person` should map to a reference variable with the same target table, such as `sys_user`; date, choice, boolean, and text values should map to compatible variable types.
 
 ## Recommended Demo Build Pattern
 

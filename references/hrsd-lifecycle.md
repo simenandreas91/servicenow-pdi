@@ -204,6 +204,7 @@ HR task card:
 
 HR task template examples:
 - Submit catalog item: `hr_task_type=submit_catalog_item^sc_cat_item=<sc_cat_item>`.
+- Submit catalog item variable mapping: create `sn_hr_le_activity_field_mapping` with `map_from_table=sn_hr_le_case`, `map_from_field=<case field>`, `map_to_table=task`, `map_to_field=variables`, and `map_to_variable=<item_option_new>`. Use this to prefill a catalog variable from lifecycle data, for example `subject_person` into a `sys_user` reference variable.
 - Collect input: `hr_task_type=collect_Information^employee_form=<sn_hr_core_employee_form>`.
 - Checklist: `hr_task_type=checklist`.
 - E-signature: `hr_task_type=e_sign^sn_esign_esignature_configuration=<sn_esign_configuration>`.
@@ -280,6 +281,7 @@ Testing sequence:
 - Open the Lifecycle Event UI and verify the visual board: activity set order, trigger labels, card order, card badges, and target type labels.
 - Submit a test HR service from the portal/UI and verify generated HR case, activity sets, tasks, approvals, child services, requests, and field mappings.
 - For HR Task card demos, verify every activity in the set has `fulfiller_activity` display value `HR Task`, points to the intended `hr_template`, and the template's encoded `hr_task_type` matches the desired experience.
+- For `submit_catalog_item` HR tasks, verify both request-field mappings and catalog-variable mappings. Catalog variables use `map_to_field=variables` plus `map_to_variable=<item_option_new>`, not only `map_to_field`.
 - Clean up test cases, requests, tasks, approvals, and generated child records; keep metadata update sets.
 
 ## Lessons Learned
@@ -310,3 +312,4 @@ Testing sequence:
 - Approval rejection lesson from 2026-05-18 PDI demo: for an HR Service/Journey approval activity where manager rejection should notify the subject person with a reason, start by inspecting `sysapproval_approver` UI Actions, `approval.rejected`, `sn_hr_core.approval_rejected`, and OOTB notification `HR Case Approval Rejected`. The better OOTB-first design is usually: keep OOTB reject/comment behavior, add only a targeted notification or mail script if the OOTB HR email lacks `subject_person` recipient logic or comment text. Use a Business Rule only when enforcing rejection comments outside normal UI paths or queuing a custom event is explicitly required.
 - 2026-05-23 HR Task activity demo in the PDI confirmed the working Table API shape: create `sn_hr_core_template` rows in Journey Designer with `table=sn_hr_core_task`, `parent_case_table=sn_hr_le_case`, assignment fields, and encoded `template`; then create Employee/Fulfiller `sn_hr_le_activity` rows with `fulfiller_activity=b09d36cfc3132200b599b4ad81d3aef5` and `hr_template=<template>`. A wrong `sn_hr_le_fulfiller_activity_config` sys_id inserted activities whose card type displayed blank, and PATCH did not correct them; delete/recreate was required.
 - The same demo created valid HR Task activities for `submit_catalog_item`, `collect_Information`, `checklist`, `e_sign`, `meeting`, `mark_when_complete`, `take_survey`, `upload_documents`, `url`, `view_video`, `action_url` via an OOTB CIC Plus template, and `create_JA_plan`. `hr_service` and `submit_order_guide` were skipped in that demo because they need suitable child service/order-guide setup and field mappings to be meaningful.
+- OOTB catalog-variable mappings confirm the pattern for catalog-backed lifecycle activities: `map_to_table=task`, `map_to_field=variables`, and `map_to_variable=<item_option_new>`. Example inspected in the PDI: activity `Reclaim Assets` maps `sn_hr_le_case.subject_person` to a catalog variable `Requested for` and is marked `valid=true`.
