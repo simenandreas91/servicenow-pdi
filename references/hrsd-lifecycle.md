@@ -91,10 +91,23 @@ Prefer cloning or templating a known-good sample before creating these from scra
 `sn_hr_le_activity_set`:
 - `le_type=<sn_hr_le_type>`
 - `title`, `display_title`, `display_order`
-- `trigger_type=immediate` for columns that start immediately.
-- `trigger_type=condition` with `condition_table` and `condition` for conditional columns.
-- `trigger_type=other_activity_sets` with `activity_set_dependencies` for dependency-based columns.
+- `trigger_type=immediate` for stages that start as soon as the Lifecycle Event case is created/ready.
+- `trigger_type=date` for milestone stages, with `trigger_table`, `trigger_field`, `ignore_empty_date`, `date_offset_type`, `date_offset_quantity`, and `date_offset_units`.
+- `trigger_type=other_activity_sets` with `activity_set_dependencies` for dependency-based stages. All selected dependencies must complete before the set triggers.
+- `trigger_type=script` for Advanced trigger scripts. The script receives `parentCase` and `hrTriggerUtil` and should return true/false.
+- `trigger_type=condition` with `condition_table` and `condition` for table/field-driven stages.
+- `trigger_type=combination` with `combination_type=and|or` plus date, dependency, and/or condition fields when multiple trigger dimensions must be evaluated together.
 - Conditional variables use encoded query syntax with variable sys_ids, for example `variables.<item_option_new_sys_id>IN100,80^EQ`.
+- `evaluation_interval` defaults to `0 04:00:00` / 4 hours and controls reevaluation for non-immediate triggers.
+
+Activity set trigger selection:
+- Use Immediate for first-stage intake, initial approvals, welcome/pre-hire tasks, or simple demo stages that should always launch at case creation.
+- Use Date for stages tied to business milestones: before start date, day one, week one, first day of leave, estimated last day of leave, employment end date, or follow-up intervals.
+- Use Other Activity Sets for linear sequencing: after approval, after pre-hire, after confirm return, or after separation initiation. Do not list mutually exclusive branch sets as dependencies for one downstream set.
+- Use Condition when a field value decides whether/when the stage starts: state, employee type, location, copied variable value, or HR profile data. If the change must launch quickly, trigger `check_activity_set_trigger` from server-side logic instead of shortening the evaluation interval.
+- Use Advanced only when Date/Condition/Dependency/Combination cannot express the rule. Keep scripts small and use `hrTriggerUtil` helpers for elapsed dates and completed sets.
+- Use Combination when multiple normal trigger dimensions are needed together. Prefer `combination_type=and` for strict gates; use `or` only when either a date/condition/dependency path is truly acceptable. Remember the dependency list itself is still an all-dependencies-complete group.
+- The PDI also has `trigger_type=rescind`; use it only for the dedicated rescind process, not as a general activity-set trigger.
 
 `sn_hr_le_activity`:
 - `activity_set=<sn_hr_le_activity_set>`
@@ -292,6 +305,8 @@ Testing sequence:
 - Activity field mappings have a `valid` flag. Several baseline/demo Journey mappings point to generic targets such as `sn_hr_core_case` or request fields and show `valid=false`; do not clone those blindly. For new build work, map to the concrete generated table/field or variable/flow input and verify `valid=true` where the platform supports validation.
 - Record producers for Journey HR Services commonly do more than call the generic case creation utility. Examples from the PDI demos: New Hire calls `sn_hr_le.hr_ActivityUtils().createCaseFromProducer`; Parental Leave also creates and links a Leave of Absence detail record through `sn_jny.LeaveOfAbsenceUtil`; Voluntary Separation updates the subject person's HR profile `employment_end_date` from the producer variable.
 - Date-triggered Journey sets can target related fields, not only direct case fields. Demo examples include `subject_person_job.job_start_date`, `leave_of_absence.first_day_of_leave`, and `leave_of_absence.estimated_last_day_of_leave`.
+- Official ServiceNow docs define Lifecycle Event activity set triggers as Immediate, Date, Other activity sets, Advanced, Condition, and Combination. PDI metadata confirms internal values `immediate`, `date`, `other_activity_sets`, `script`, `condition`, and `combination`; `combination_type` choices are `and` and `or`; date offset choices are `before`/`after` with units `days`, `weeks`, and `months`.
+- The HR Activity Launcher evaluates activity sets when a Lifecycle Event case reaches Ready, but non-immediate sets can wait for reevaluation. The default `evaluation_interval` is 4 hours. ServiceNow recommends using the `check_activity_set_trigger` workflow event from server-side logic for just-in-time checks instead of lowering the interval broadly.
 - Creating `sn_hr_core_service` and `sn_hr_le_activity` with server-side GlideRecord can fail with an empty `getLastErrorMessage()`. Prefer Table API `POST/PATCH` for these records, then verify capture in the Journey Designer update set.
 - HR templates (`sn_hr_core_template`) can have scope/visibility differences between global and `sn_jny`; if a read path is inconsistent, verify by sys_id and use the creation path that captures in the active Journey Designer update set.
 - Creating a journey service can auto-create placeholder `Activity Set 1/2/3` records. Delete unintended placeholder activity sets and their `sys_update_xml` rows before delivery.

@@ -28,6 +28,28 @@ Use this as the first compact model guide for HRSD HR Service, Lifecycle Event, 
 - Notification activities use `sn_hr_core_email_content` email content plus recipient fields/users/groups on the activity.
 - Activity sets and activities both have conditions. In the PDI, date-triggered activity-set conditions are not reliable gates by themselves; put conditional logic on activities when suppression matters.
 
+## Activity Set Trigger Types
+
+Activity Sets are Lifecycle Event stages. The trigger type controls when the stage's activities become available; `display_order` only controls visual order and does not control timing. Official ServiceNow docs describe these trigger methods as immediate, date, other activity sets, advanced script, condition, and combination. In the PDI, `sn_hr_le_activity_set.trigger_type` also has a `rescind` choice for rescind handling; treat that as a dedicated rescind-process pattern, not a normal stage trigger.
+
+Decision guide:
+
+| Trigger type | Value | Use when | Key fields / notes |
+| --- | --- | --- | --- |
+| Immediate | `immediate` | The first stage should launch as soon as the Lifecycle Event case is created/ready. Good for intake review, initial approval, welcome/pre-hire tasks, and simple demos. | Usually no trigger-specific fields. Keep only one or a few immediate sets unless parallel work is intentional. |
+| Date | `date` | Work is tied to a real milestone date, such as job start date, first day of leave, estimated return date, employment end date, or 30/60/90-day check-in. | `trigger_table`, `trigger_field`, `ignore_empty_date`, `date_offset_type=before|after`, `date_offset_quantity`, `date_offset_units=days|weeks|months`. Date fields can be related paths such as `subject_person_job.job_start_date`. |
+| Other Activity Sets | `other_activity_sets` | A stage must wait until one or more earlier stages finish, such as HR processing after manager approval or return-to-work tasks after confirm-return. | `activity_set_dependencies` is a glide list of prerequisite activity sets. The dependency list is AND-style: all selected sets must complete. |
+| Advanced | `script` | OOTB Date/Condition/Dependency logic cannot express the rule, for example manager exists, date elapsed, and specific sets completed, or a custom business state must be checked. | `trigger_script` returns true/false. The script receives `parentCase` and `hrTriggerUtil`. Prefer this only when no-code triggers cannot model the requirement. |
+| Condition | `condition` | The stage should launch when fields on an HR case/profile table match an encoded condition, such as case state, lifecycle variables copied to fields, location, employee type, or employment end date. | `condition_table`, `condition`, and `evaluation_interval`. For faster checks, use the `check_activity_set_trigger` event pattern instead of lowering the interval. |
+| Combination | `combination` | The stage needs Date, Other Activity Sets, and/or Condition together, such as "after approval AND five days before leave" or "date OR condition" where the UI supports it. | Same fields as Date/Condition/Dependencies plus `combination_type=and|or`. Use carefully; dependencies inside `activity_set_dependencies` still behave as all selected dependencies complete. |
+
+Trigger timing notes:
+- When a Lifecycle Event case moves to Ready, HR Activity Launcher evaluates activity sets; activities only launch when the set's trigger condition is met.
+- Non-immediate trigger checks can wait for the `evaluation_interval`, which defaults to four hours (`0 04:00:00` / display `4 Hours` in the PDI).
+- Do not reduce the global/default evaluation interval casually. ServiceNow warns that frequent updates can cause activity sets to cancel before completion. Use the `check_activity_set_trigger` workflow event from a Business Rule/event/scheduled job when a condition should be reevaluated immediately.
+- The `check_activity_set_trigger` event works for condition/script/date-style reevaluation, but not for sets triggered immediately or only by other activity sets.
+- Changing trigger type, audience, or adding activities affects only activity sets/cases that have not already triggered. Existing generated activities are not rebuilt automatically.
+
 ## Activity Types
 
 Use this decision ladder before creating a Lifecycle Event activity:
