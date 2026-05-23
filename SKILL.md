@@ -291,4 +291,4 @@ Known IDs: admin user `6816f79cc0a8016401c5a33be04be441`; global scope `global`;
 
 After ServiceNow work, capture only durable, non-obvious lessons. Add a one-line routing pointer here only if it changes future workflow selection; put detailed lessons in the relevant `references/lessons-*.md` file.
 
-When Simen asks to publish skill updates, canonical repository is `https://github.com/simenandreas91/servicenow-pdi.git`. Inspect status and diff, stage only intended skill files, commit tersely, push to `origin`, and report branch and commit.
+When Simen asks to publish skill updates, canonical repository is `https://github.com/simenandreas91/servicenow-pdi.git`. This is a personal skill repo used only by Simen/Codex environments, so publish directly on `main`: inspect status and diff, stage only intended skill files, commit tersely on `main`, push `main` to `origin`, and report commit. Do not create `codex/*` branches or PRs for routine skill updates unless Simen explicitly asks.
