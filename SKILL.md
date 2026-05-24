@@ -219,6 +219,7 @@ Load `references/golden-paths.md` for step-by-step workflows and checklists. Com
 - HRSD/Journey: service table/COE, templates, producer, lifecycle metadata, generated case/task verification.
 - Imports: data source, attachment, import set, transform map, small test transform, row errors, full run.
 - Notifications: event registration, notification conditions, recipients, weights, trigger, `sysevent`/`sys_email`.
+- Custom scoped app: candidate decision, Studio/AES/IDE tool choice, scoped update set, table/role/ACL/data/UX/logic vertical slice, source-control deployment path.
 
 ## Domain Routing
 
@@ -228,6 +229,7 @@ Load `references/golden-paths.md` for step-by-step workflows and checklists. Com
 - Incident routing, assignment, state, or process changes: load `references/lessons-incident.md`.
 - Platform Analytics dashboards: load `references/lessons-platform-analytics.md`.
 - FFI Personellsikkerhet app (`x_personellsikkerh`): load `references/lessons-personellsikkerhet.md`.
+- Custom scoped application, new app/table/role/navigation, App Engine Studio, ServiceNow Studio, source control, Application Repository, or app deployment decisions: load `references/custom-scoped-apps.md`.
 - Service Operations Workspace, action bar buttons, modals, or Declarative Actions: load `references/lessons-sow.md`; for modal/action implementation also load `references/lessons-workspace-modals.md`.
 - UI16 popup/modal work, UI Pages, `GlideDialogWindow`, classic Client Scripts, UI Actions, or GlideAjax modal saves: load `references/lessons-ui16.md`.
 - Now Assist, Now Assist for HRSD, Skill Kit, AI Search Genius Results, AI agents, AI Agent Studio, agentic workflows, MCP tools, AI Control Tower, model providers, or AI privacy/safety: load `references/now-assist.md`.

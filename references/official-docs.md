@@ -52,7 +52,16 @@ Search `index.md` files first. They are dense tables of contents with raw topic 
 - `markdown/application-development/c_ApplicationScope.md`: scope behavior and namespace rules.
 - `markdown/application-development/c_ApplicationAccessSettings.md`: cross-scope application access settings.
 - `markdown/application-development/c_ApplicationFiles.md`: application files, `sys_metadata`, and update set capture in `sys_update_xml`.
+- `markdown/application-development/determining-good-candidates-for-apps.md`: when to build a custom app rather than modify an existing application.
+- `markdown/application-development/developing-applications.md`: builder selection across Creator Studio, App Engine Studio, ServiceNow Studio, IDE/SDK, and Build Agent.
+- `markdown/application-development/r_TableApplicationAccessFields.md`: table-level cross-scope and web-service access fields.
 - `markdown/application-development/best-practices-use-source-control.md`: when source control/Application Repository is preferred and when System Update Sets still make sense.
+- `markdown/application-development/moving-applications-between-instances.md`: multi-instance movement, coherent app-scope artifacts, and deployment security considerations.
+- `markdown/application-development/servicenow-studio-classic/create-an-application-in-servicenow-studio.md`: Studio app creation flow, scoped/global choice, and role requirement.
+- `markdown/application-development/servicenow-studio-classic/working-with-update-sets-in-servicenow-studio.md`: Studio update-set actions for admins and delegated developers.
+- `markdown/application-development/app-engine-studio/create-application.md`: AES app model of data, experience, automation, and security.
+- `markdown/application-development/app-engine-studio/add-data.md`: AES data model/table creation concepts and table extension considerations.
+- `markdown/application-development/app-engine-studio/add-security.md`: AES role/security model for custom apps.
 
 ## High-Value AI Paths
 

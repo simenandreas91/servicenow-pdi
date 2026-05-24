@@ -26,6 +26,7 @@ Use these workflows to move quickly without guessing. Keep each run narrow: insp
 | Portal / Employee Center | Portal, page, widget, instance, theme, options | Options/page/theme before clone | Browser or portal endpoint in target channel |
 | Workspace / SOW | UX app, route, action assignment, payload/model | Declarative Action/UX config | Workspace action visibility and submit behavior |
 | HRSD / Journey | COE, service, template, producer, Journey metadata | HRSD metadata before raw script | Generated case/task/activity/approval/notification |
+| Custom scoped app | App candidate, existing product fit, scope, data model, roles, deployment path | Studio/AES/IDE with scoped app, table, role, ACL, UX, logic | Sample record, generated ACLs, app-file capture, channel test |
 | Integration / import | REST/data source/transform/logs | Connection alias/spoke/transform config | Sample payload or transform run plus logs/errors |
 | Notification | Event, notification, template, recipients | Event/notification config | `sysevent`, `sys_email`, recipient/body marker |
 | Update set | Health check and update-set summary | One scoped update set per app | mixed-scope=false or explained platform rows |
@@ -96,6 +97,16 @@ Use this only when the user gives a story number or asks for story-style deliver
 4. Prefer HRSD/Journey metadata over raw Flow metadata for service lifecycle work.
 5. Verify both design-time records and runtime output: generated HR case, activities, approvals, HR tasks, recipients, and notifications.
 6. Keep update sets split by scope when Journey, HR Core, portal, and flow artifacts cross application boundaries.
+
+## Custom Scoped Application
+
+1. Load `references/custom-scoped-apps.md` and decide if the requirement is truly a new app instead of OOTB configuration or extension.
+2. Choose the builder: ServiceNow Studio for platform app files, App Engine Studio for low-code app assembly, ServiceNow IDE/SDK for source-code-first apps, API automation only for narrow PDI/demo work.
+3. Create a scoped app with durable name/scope, at least one role, and a dedicated scoped update set.
+4. Build a small vertical slice in this order: data model, roles/ACLs, menu/module or target experience, then Flow/script logic.
+5. Keep cross-scope application access and table web-service access closed unless required and justified.
+6. Verify with one safe sample record, generated ACL/readability checks, and `Get-ServiceNowUpdateSetSummary.ps1` showing one application scope.
+7. For real deployment, prefer source control + Application Repository/pipelines; use update sets for PDI demos, global work, emergency hotfixes, or legacy delivery.
 
 ## Imports And Transform Maps
 
