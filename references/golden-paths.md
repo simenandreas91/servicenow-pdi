@@ -8,13 +8,14 @@ Use these workflows to move quickly without guessing. Keep each run narrow: insp
 2. For substantial work or after context loss, run `Get-ServiceNowPdiHealth.ps1` and note instance/build, current app/update set, Xplore health, Table API fallback signals, and stale update-set noise.
 3. Resolve existing artifacts by exact name/key/number. Read `sys_scope`, `sys_package`, `active`, ownership, and relevant scripts/configuration.
 4. Inspect table shape before unfamiliar writes: dictionary fields, choices, reference targets, mandatory fields, ACL summary, and display/coalesce candidates.
-5. Choose the implementation path: OOTB setting/config, existing flow/action, additive config, Script Include wrapper, clone/extend, or custom app/API/UI.
-6. Snapshot preferences and set the correct scoped update set.
-7. Write the smallest change that satisfies the acceptance criteria. Preserve ServiceNow-owned artifacts unless a direct edit is intentional.
-8. Confirm update capture and check for mixed-scope rows before behavior testing.
-9. Test through the channel and role that matter. Use Xplore only for compact server-side checks and browser/UI only for visual or builder-only behavior.
-10. Clean test data and accidental customer updates. Restore preferences.
-11. Report update set, artifacts, tests, rollback, assumptions, risks, and manual steps.
+5. For unfamiliar or cross-boundary behavior, build a compact graph map from `references/servicenow-graph-mapping.md`: nodes are records/artifacts/runtime evidence, edges are actual relationships.
+6. Choose the implementation path: OOTB setting/config, existing flow/action, additive config, Script Include wrapper, clone/extend, or custom app/API/UI.
+7. Snapshot preferences and set the correct scoped update set.
+8. Write the smallest change that satisfies the acceptance criteria. Preserve ServiceNow-owned artifacts unless a direct edit is intentional.
+9. Confirm update capture and check for mixed-scope rows before behavior testing.
+10. Test through the channel and role that matter. Use Xplore only for compact server-side checks and browser/UI only for visual or builder-only behavior.
+11. Clean test data and accidental customer updates. Restore preferences.
+12. Report update set, artifacts, tests, rollback, assumptions, risks, and manual steps.
 
 ## Reliability Classifier
 
@@ -27,6 +28,7 @@ Use these workflows to move quickly without guessing. Keep each run narrow: insp
 | Workspace / SOW | UX app, route, action assignment, payload/model | Declarative Action/UX config | Workspace action visibility and submit behavior |
 | HRSD / Journey | COE, service, template, producer, Journey metadata | HRSD metadata before raw script | Generated case/task/activity/approval/notification |
 | Custom scoped app | App candidate, existing product fit, scope, data model, roles, deployment path | Studio/AES/IDE with scoped app, table, role, ACL, UX, logic | Sample record, generated ACLs, app-file capture, channel test |
+| Unfamiliar app/process | Graph map of tables, scripts, flows, ACLs, UI, events, runtime evidence | Highest-level confirmed artifact that controls behavior | Same mapped path end-to-end plus one-hop blast-radius checks |
 | Integration / import | REST/data source/transform/logs | Connection alias/spoke/transform config | Sample payload or transform run plus logs/errors |
 | Notification | Event, notification, template, recipients | Event/notification config | `sysevent`, `sys_email`, recipient/body marker |
 | Update set | Health check and update-set summary | One scoped update set per app | mixed-scope=false or explained platform rows |

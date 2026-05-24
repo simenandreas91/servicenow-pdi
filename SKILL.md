@@ -33,6 +33,7 @@ Default to the bundled PowerShell helpers for fast, narrow, repeatable work. Use
    - named artifact: run `Find-ServiceNowArtifact.ps1`
    - unfamiliar table/write: run `Get-ServiceNowTableShape.ps1`
    - returned after time away: run `Export-ServiceNowDelta.ps1`
+   - complex unfamiliar app/process: build a temporary ServiceNow graph map with `references/servicenow-graph-mapping.md`
 4. Decide OOTB vs custom with **Decision Ladder**. State the winning path and why when architecture matters.
 5. Before edits, run `Set-ServiceNowUpdateSetContext.ps1` with a snapshot path.
 6. Implement narrowly using existing naming, scope, package, and script patterns.
@@ -220,6 +221,7 @@ Load `references/golden-paths.md` for step-by-step workflows and checklists. Com
 - Imports: data source, attachment, import set, transform map, small test transform, row errors, full run.
 - Notifications: event registration, notification conditions, recipients, weights, trigger, `sysevent`/`sys_email`.
 - Custom scoped app: candidate decision, Studio/AES/IDE tool choice, scoped update set, table/role/ACL/data/UX/logic vertical slice, source-control deployment path.
+- Complex app/process discovery: map records as nodes and relationships as edges before editing; use it for guided tours, blast-radius checks, and targeted verification.
 
 ## Domain Routing
 
@@ -230,6 +232,7 @@ Load `references/golden-paths.md` for step-by-step workflows and checklists. Com
 - Platform Analytics dashboards: load `references/lessons-platform-analytics.md`.
 - FFI Personellsikkerhet app (`x_personellsikkerh`): load `references/lessons-personellsikkerhet.md`.
 - Custom scoped application, new app/table/role/navigation, App Engine Studio, ServiceNow Studio, source control, Application Repository, or app deployment decisions: load `references/custom-scoped-apps.md`.
+- Unfamiliar application, tangled process, cross-channel behavior, or impact analysis before edits: load `references/servicenow-graph-mapping.md`.
 - Service Operations Workspace, action bar buttons, modals, or Declarative Actions: load `references/lessons-sow.md`; for modal/action implementation also load `references/lessons-workspace-modals.md`.
 - UI16 popup/modal work, UI Pages, `GlideDialogWindow`, classic Client Scripts, UI Actions, or GlideAjax modal saves: load `references/lessons-ui16.md`.
 - Now Assist, Now Assist for HRSD, Skill Kit, AI Search Genius Results, AI agents, AI Agent Studio, agentic workflows, MCP tools, AI Control Tower, model providers, or AI privacy/safety: load `references/now-assist.md`.
