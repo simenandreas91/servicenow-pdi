@@ -15,6 +15,18 @@ Default cache path is `.servicenow-cache` in the current working directory.
 
 ## Scripts
 
+`Get-ServiceNowPdiHealth.ps1`
+
+Runs a read-only preflight for the PDI or selected instance. It checks Xplore, instance/build, current user/scope, current update-set preferences, stale in-progress update-set noise, and whether key Table API metadata reads are blocked.
+
+```powershell
+& "$HOME/.codex/skills/servicenow-pdi/scripts/Get-ServiceNowPdiHealth.ps1" `
+  -Profile pdi `
+  -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env'
+```
+
+Use this before substantial implementation work, after context loss, or when a Table API call fails unexpectedly. If `table_api_checks` shows a blocked metadata table while `xplore.ok=true`, use a narrow read-only Xplore probe for inventory rather than broadening API queries. `sys_plugins` is a known example of API-level ACL blocking on the PDI.
+
 `Get-ServiceNowScopeInventory.ps1`
 
 Creates a cached inventory of common artifact records in a scope. Use this before broad exploration.
@@ -94,10 +106,11 @@ Exports records changed in a scope since a timestamp across common artifact tabl
 ## Practical Workflow
 
 1. Run `Get-ServiceNowScopeInventory.ps1` for the relevant scope.
-2. Use `Find-ServiceNowArtifact.ps1` for targeted discovery.
-3. Use `Get-ServiceNowTableShape.ps1` before writes to unfamiliar tables.
-4. Use `Get-ServiceNowUpdateSetSummary.ps1` after implementation to check capture and noise.
-5. Use `Test-ServiceNowNotification.ps1` for event/email work.
-6. Use `Export-ServiceNowDelta.ps1` when returning to an instance after time has passed.
+2. Run `Get-ServiceNowPdiHealth.ps1` when starting broad work or after time away.
+3. Use `Find-ServiceNowArtifact.ps1` for targeted discovery.
+4. Use `Get-ServiceNowTableShape.ps1` before writes to unfamiliar tables.
+5. Use `Get-ServiceNowUpdateSetSummary.ps1` after implementation to check capture and noise.
+6. Use `Test-ServiceNowNotification.ps1` for event/email work.
+7. Use `Export-ServiceNowDelta.ps1` when returning to an instance after time has passed.
 
 Use `-Refresh` when you know the instance changed and the local cache may be stale. Use `-NoCache` for verification immediately after writes.

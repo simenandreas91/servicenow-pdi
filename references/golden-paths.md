@@ -5,15 +5,30 @@ Use these workflows to move quickly without guessing. Keep each run narrow: insp
 ## Universal Change Path
 
 1. Restate the target behavior and classify area, table/artifact, UI channel, scope, security impact, data impact, and acceptance criteria.
-2. Resolve existing artifacts by exact name/key/number. Read `sys_scope`, `sys_package`, `active`, ownership, and relevant scripts/configuration.
-3. Inspect table shape before unfamiliar writes: dictionary fields, choices, reference targets, mandatory fields, ACL summary, and display/coalesce candidates.
-4. Choose the implementation path: OOTB setting/config, existing flow/action, additive config, Script Include wrapper, clone/extend, or custom app/API/UI.
-5. Snapshot preferences and set the correct scoped update set.
-6. Write the smallest change that satisfies the acceptance criteria. Preserve ServiceNow-owned artifacts unless a direct edit is intentional.
-7. Confirm update capture and check for mixed-scope rows before behavior testing.
-8. Test through the channel and role that matter. Use Xplore only for compact server-side checks and browser/UI only for visual or builder-only behavior.
-9. Clean test data and accidental customer updates. Restore preferences.
-10. Report update set, artifacts, tests, rollback, assumptions, risks, and manual steps.
+2. For substantial work or after context loss, run `Get-ServiceNowPdiHealth.ps1` and note instance/build, current app/update set, Xplore health, Table API fallback signals, and stale update-set noise.
+3. Resolve existing artifacts by exact name/key/number. Read `sys_scope`, `sys_package`, `active`, ownership, and relevant scripts/configuration.
+4. Inspect table shape before unfamiliar writes: dictionary fields, choices, reference targets, mandatory fields, ACL summary, and display/coalesce candidates.
+5. Choose the implementation path: OOTB setting/config, existing flow/action, additive config, Script Include wrapper, clone/extend, or custom app/API/UI.
+6. Snapshot preferences and set the correct scoped update set.
+7. Write the smallest change that satisfies the acceptance criteria. Preserve ServiceNow-owned artifacts unless a direct edit is intentional.
+8. Confirm update capture and check for mixed-scope rows before behavior testing.
+9. Test through the channel and role that matter. Use Xplore only for compact server-side checks and browser/UI only for visual or builder-only behavior.
+10. Clean test data and accidental customer updates. Restore preferences.
+11. Report update set, artifacts, tests, rollback, assumptions, risks, and manual steps.
+
+## Reliability Classifier
+
+| Work type | Inspect first | Prefer | Prove with |
+| --- | --- | --- | --- |
+| Business Rule / Script Include | Existing rules/includes, table shape, current guards | Small guarded config/script in same scope | Xplore logic probe plus matching/non-matching records |
+| Flow / IntegrationHub | Flow/action metadata, connection aliases, logs | Existing Flow/action/spoke configuration | Flow contexts, runtime values, outbound/import logs |
+| ACL / visibility | ACL summary, roles, user criteria, before-query rules | Least-privilege ACL/config change | Role-aware channel test or `GlideRecordSecure` probe |
+| Portal / Employee Center | Portal, page, widget, instance, theme, options | Options/page/theme before clone | Browser or portal endpoint in target channel |
+| Workspace / SOW | UX app, route, action assignment, payload/model | Declarative Action/UX config | Workspace action visibility and submit behavior |
+| HRSD / Journey | COE, service, template, producer, Journey metadata | HRSD metadata before raw script | Generated case/task/activity/approval/notification |
+| Integration / import | REST/data source/transform/logs | Connection alias/spoke/transform config | Sample payload or transform run plus logs/errors |
+| Notification | Event, notification, template, recipients | Event/notification config | `sysevent`, `sys_email`, recipient/body marker |
+| Update set | Health check and update-set summary | One scoped update set per app | mixed-scope=false or explained platform rows |
 
 ## Story Delivery
 

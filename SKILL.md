@@ -28,6 +28,7 @@ Default to the bundled PowerShell helpers for fast, narrow, repeatable work. Use
 1. Classify the task: area, target table/artifact, UI channel, scope, data impact, security impact, integration boundary, and acceptance criteria.
 2. Route references only when needed. Start with this file; load a focused reference from **Domain Routing** if the task touches that domain.
 3. Discover narrowly:
+   - before significant work or after context loss: run `Get-ServiceNowPdiHealth.ps1`
    - known scope/app: run `Get-ServiceNowScopeInventory.ps1`
    - named artifact: run `Find-ServiceNowArtifact.ps1`
    - unfamiliar table/write: run `Get-ServiceNowTableShape.ps1`
@@ -64,6 +65,7 @@ Do not store secrets in this skill. Keep them in `.env` or an OS credential stor
 - `Invoke-ServiceNowTable.ps1`: default for narrow reads, creates, patches, schema records, update sets, and setup data.
 - `Invoke-ServiceNowXploreScript.ps1`: server-side read-only verification, GlideRecord/GlideAggregate probes, platform API checks, and small constrained behavior tests.
 - `Invoke-ServiceNowBackgroundScript.ps1`: only when Xplore is unavailable or Scripts - Background behavior must be compared.
+- `Get-ServiceNowPdiHealth.ps1`: read-only preflight for instance build, current user/scope/update set, Xplore health, update-set noise, and Table API ACL fallback signals.
 - `Set-ServiceNowUpdateSetContext.ps1`: snapshot preferences, create or select scoped update set, and make it current.
 - `Restore-ServiceNowPreferenceSnapshot.ps1`: restore developer preferences before handoff.
 - `Confirm-ServiceNowUpdateCapture.ps1`: prove specific records were captured in the intended update set and application.
@@ -139,6 +141,16 @@ Restore preferences:
   -Profile pdi `
   -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env'
 ```
+
+PDI preflight:
+
+```powershell
+& "$HOME/.codex/skills/servicenow-pdi/scripts/Get-ServiceNowPdiHealth.ps1" `
+  -Profile pdi `
+  -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env'
+```
+
+Use the preflight after context loss, before broad implementation work, or when API behavior seems inconsistent. It is read-only and returns compact JSON for instance/build, current user, scope, update-set preference, Xplore status, Table API checks, and update-set noise. If a metadata table fails Table API ACL validation, prefer a constrained read-only Xplore fallback rather than stopping; `sys_plugins` can be blocked by API-level ACLs even for admin.
 
 ## Complete, Export, And Email Update Set
 
@@ -219,6 +231,7 @@ Load `references/golden-paths.md` for step-by-step workflows and checklists. Com
 - Service Operations Workspace, action bar buttons, modals, or Declarative Actions: load `references/lessons-sow.md`; for modal/action implementation also load `references/lessons-workspace-modals.md`.
 - UI16 popup/modal work, UI Pages, `GlideDialogWindow`, classic Client Scripts, UI Actions, or GlideAjax modal saves: load `references/lessons-ui16.md`.
 - Now Assist, Now Assist for HRSD, Skill Kit, AI Search Genius Results, AI agents, AI Agent Studio, agentic workflows, MCP tools, AI Control Tower, model providers, or AI privacy/safety: load `references/now-assist.md`.
+- Australia release AI development features, Build Agent, ServiceNow Studio AI-assisted app generation, MCP Server Console, or MCP Client: load `references/australia-ai-platform.md` plus `references/now-assist.md` when runtime AI configuration is involved.
 - Integrations, REST messages, SAP SuccessFactors, import/export, auth profiles, or connection aliases: load `references/integrations.md`; use `references/lessons-integrations.md` for durable local import/integration lessons.
 - Debugging ACLs, hidden records, role visibility, before-query rules, or user criteria: load `references/debugging.md`.
 - Portal/Employee Center widgets/themes/pages: load `references/tables.md`, then `references/lessons-portal.md` if behavior is tricky.
@@ -249,6 +262,39 @@ Immediate stop-and-confirm cases:
 - Integration-level: verify connection alias/auth profile, status code, payload shape, logs, retries, error handling, and idempotency.
 - UI-level: verify the channel the user cares about; classic UI success does not prove Workspace/Portal/Employee Center behavior.
 - Cleanup: remove throwaway data and accidental customer updates unless they are intentional deliverables.
+
+## Reliability Routing
+
+| Task type | First inspection | Safest implementation surface | Verification | Stop and confirm |
+| --- | --- | --- | --- | --- |
+| Business Rule or Script Include | `Find-ServiceNowArtifact.ps1`, `Get-ServiceNowTableShape.ps1` | Existing rule/include, then small reusable Script Include plus thin trigger | Xplore unit probe plus insert/update regression record | broad table impact, recursion risk, ServiceNow-owned rule rewrite |
+| Flow, subflow, or IntegrationHub | Flow metadata, action inputs/outputs, connection aliases | Existing Flow/action config before script | `sys_flow_context`, runtime values, logs, one safe payload | credential/auth change, spoke install, external side effects |
+| ACL or visibility | Table shape with ACL summary, roles/groups/user criteria | Least-privilege ACL/role/config change | role-aware REST/browser plus `GlideRecordSecure` | security bypass, many-user role change, domain-separated behavior |
+| Portal or Employee Center | Portal/page/widget/theme/options | Instance options/theme/page composition before clone | Service Portal endpoint/browser, desktop/mobile when visual | cloning OOTB widget, cache flush, user-criteria ambiguity |
+| Workspace or SOW | UX app config, route, action assignment, payload/model records | Declarative Actions and UX config before custom client code | Workspace browser check, action visibility, submit behavior | channel ambiguity, modal data writes, ServiceNow-owned UX edit |
+| HRSD or Journey | HRSD references, service/COE/template/producer/Journey metadata | HRSD metadata and templates before custom Flow/script | generated case/task/activity/approval/notification runtime | COE/case-table ambiguity, employee data impact, mixed scopes |
+| Integration/import | REST message/data source/transform map/log records | Connection alias/spoke/transform config before custom API | outbound/import logs, sample run counts, row errors | credentials, broad transform, production-like data repair |
+| Notification | Event registration, notification, template, recipients | Event/notification config and mail scripts | `Test-ServiceNowNotification.ps1`, `sysevent`, `sys_email` | recipient ambiguity, suppressing OOTB mail, sensitive content |
+| Update set/release | `Get-ServiceNowPdiHealth.ps1`, `Get-ServiceNowUpdateSetSummary.ps1` | One scoped update set per app, parent batch only when needed | mixed-scope check, expected rows, XML export when requested | complete/export with noise, mixed scope, production manipulation |
+
+## Verification Recipes
+
+- Record exists: read by `sys_id` with Table API, verify `active/current state`, `sys_scope`, `sys_package`, key fields, and display values when useful.
+- Runtime behavior works: trigger one realistic record/action/request, then verify the resulting record, field, event, flow context, log, or generated child artifact.
+- Role visibility works: test the affected channel with Table API/browser when credentials exist; otherwise use constrained Xplore with `GlideRecordSecure` and explicit user/role assumptions.
+- Notification sent: use `Test-ServiceNowNotification.ps1`; report event row, matched notification, generated/ignored email, recipient, subject/body marker, and duplicate suppression behavior.
+- Flow executed: inspect `sys_flow_context`, trigger plan, runtime values, step status, retries, and error text; confirm the expected business record changed.
+- Update set clean: use `Get-ServiceNowUpdateSetSummary.ps1`; report expected application, row count, mixed-scope state, noise rows, and unexpected types before complete/export.
+- UI channel renders: verify the requested channel, not a substitute; use browser checks for Portal/Workspace and include viewport/state tested when layout matters.
+
+## Update-Set Hygiene
+
+1. Run `Get-ServiceNowPdiHealth.ps1` when starting substantial work; note current update set, current app, stale in-progress update-set count, and API fallback status.
+2. Before writes, snapshot preferences and set the intended scope/update set with `Set-ServiceNowUpdateSetContext.ps1`.
+3. During work, confirm captured rows belong to the intended application. Mixed scope is a warning unless it is an understood platform-generated pattern.
+4. Leave unrelated in-progress update sets alone. Clean only throwaway data, accidental customer updates from the current task, or update-set noise that is clearly caused by this run.
+5. Ask before completing/exporting when the summary shows mixed scope, unexpected application, broad form/layout noise, or records outside the named task.
+6. Restore preferences before handoff and report whether the restored state matches the snapshot.
 
 ## Output Contract
 
