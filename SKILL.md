@@ -67,6 +67,7 @@ Do not store secrets in this skill. Keep them in `.env` or an OS credential stor
 - `Invoke-ServiceNowXploreScript.ps1`: server-side read-only verification, GlideRecord/GlideAggregate probes, platform API checks, and small constrained behavior tests.
 - `Invoke-ServiceNowBackgroundScript.ps1`: only when Xplore is unavailable or Scripts - Background behavior must be compared.
 - `Get-ServiceNowPdiHealth.ps1`: read-only preflight for instance build, current user/scope/update set, Xplore health, update-set noise, and Table API ACL fallback signals.
+- `Initialize-ServiceNowAndrewReactApp.ps1`: configure Andrew Pishchulin's React/Vite single-file SPA boilerplate for local ServiceNow development by setting the Vite `/api` proxy and creating the ignored Vite `.env` from a ServiceNow profile.
 - `Set-ServiceNowUpdateSetContext.ps1`: snapshot preferences, create or select scoped update set, and make it current.
 - `Restore-ServiceNowPreferenceSnapshot.ps1`: restore developer preferences before handoff.
 - `Confirm-ServiceNowUpdateCapture.ps1`: prove specific records were captured in the intended update set and application.
@@ -152,6 +153,31 @@ PDI preflight:
 ```
 
 Use the preflight after context loss, before broad implementation work, or when API behavior seems inconsistent. It is read-only and returns compact JSON for instance/build, current user, scope, update-set preference, Xplore status, Table API checks, and update-set noise. If a metadata table fails Table API ACL validation, prefer a constrained read-only Xplore fallback rather than stopping; `sys_plugins` can be blocked by API-level ACLs even for admin.
+
+Andrew approach React/Vite setup:
+
+Use this when Simen asks for the Andrew approach, Andrew Pishchulin's custom ServiceNow front-end pattern, or a single-file React/Vite SPA hosted from a ServiceNow property and Scripted REST API. The boilerplate is `https://github.com/elinsoftware/servicenow-react-app`.
+
+```powershell
+git clone https://github.com/elinsoftware/servicenow-react-app.git '<project path>'
+Set-Location '<project path>'
+& "$HOME/.codex/skills/servicenow-pdi/scripts/Initialize-ServiceNowAndrewReactApp.ps1" `
+  -Profile pdi `
+  -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env' `
+  -Install
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Local development flow:
+
+1. The helper updates `vite.config.ts` so `/api` proxies to the selected ServiceNow instance.
+2. The helper creates project `.env` with `VITE_REACT_APP_USER` and `VITE_REACT_APP_PASSWORD`; this file must stay ignored and must not be committed.
+3. In development, the app sets `axios.defaults.auth` and calls ServiceNow through `/api`, so Table API ACLs run as the configured user.
+4. Verify the connection with `/api/now/table/sys_user?sysparm_query=sys_id=javascript:gs.getUserID()` and confirm the page renders `Logged in as <name>`.
+5. For ServiceNow hosting, build with `npm run build`, store `dist/index.html` in a string system property, and serve that property from a public unauthenticated Scripted REST GET endpoint with `text/html`.
+6. For production user context, add a public unauthenticated token endpoint that returns `gs.getSession().getSessionToken()` and `gs.getUserName()`, then set `axios.defaults.headers['X-userToken']` before rendering the React app. Guest callers only receive guest context; authenticated ServiceNow users receive their own session context.
+
+Use `HashRouter` for in-app routing because ServiceNow serves the app from a Scripted REST URL.
 
 ## Complete, Export, And Email Update Set
 
