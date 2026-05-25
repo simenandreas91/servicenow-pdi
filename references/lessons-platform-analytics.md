@@ -264,26 +264,38 @@ Avoid Java `String.replace(regex, value)` ambiguity by using `String(...)` aroun
 
 ## ITIL Agent Dashboard Pattern
 
-For agent-facing work dashboards, a compact 48-column layout works well:
+For fulfiller/ITIL agent dashboards, frame the dashboard around "What needs my attention now?" rather than a flat collection of lists. Keep personal action, group pickup work, SLA risk, urgent priority, and cleanup/waiting work visually distinct.
+
+An attention-first 48-column layout works well:
 
 - `y=0`: Heading across `w=48`, `h=3`
-- `y=3`: four single scores, each `w=12`, `h=8`
-- `y=11`: three charts, each `w=16`, `h=14`
-- `y=25`: two worklists, each `w=24`, `h=18`
-- `y=43`: one full-width queue list, `w=48`, `h=16`
+- `y=3`: six KPI counters, each `w=8`, `h=7`
+- `y=10`: two primary action lists, each `w=24`, `h=16`
+- `y=26`: two SLA/priority focus lists, each `w=24`, `h=16`
+- `y=42`: two cleanup/waiting lists, each `w=24`, `h=16`
+- `y=58`: two control lists, each `w=24`, `h=16`
 
-Useful ITIL widgets:
+Recommended KPI counters:
 
-- score: my active incidents, table `incident`, filter `active=true^assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe`
-- score: my open request items, table `sc_req_item`, filter `active=true^assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe`
-- score: my active interactions, table `interaction`, filter `active=true^assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe`
-- score: high priority incidents, table `incident`, filter `active=true^priorityIN1,2`
-- bar: incident queue by priority, table `incident`, filter `active=true^assignment_groupDYNAMICd6435e965f510100a9ad2572f2b47744`, group by `priority`
-- bar: request items by stage, table `sc_req_item`, filter `active=true^assignment_groupDYNAMICd6435e965f510100a9ad2572f2b47744`, group by `stage`
-- donut: interactions by state, table `interaction`, filter `active=true`, group by `state`
-- list: my incident worklist, columns `number,priority,state,short_description,caller_id,sys_updated_on`
-- list: my request item worklist, columns `number,stage,cat_item,request,requested_for,short_description,sys_updated_on`
-- list: group interaction queue, columns `number,state,type,opened_for,short_description,assigned_to,opened_at`
+- score: my open incidents, table `incident`, filter `assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe^stateNOT IN6,7,8`
+- score: my request work, table `task`, filter `sys_class_nameINsc_req_item,sc_task^assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe^active=true`
+- score: my interactions, table `interaction`, filter `assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe^active=true`
+- score: unassigned in my groups, table `task`, filter `assignment_groupDYNAMICd6435e965f510100a9ad2572f2b47744^assigned_toISEMPTY^active=true^sys_class_nameINincident,sc_req_item,sc_task,interaction`
+- score: breaching soon, table `task_sla`, filter `stageINin_progress,paused^planned_end_timeRELATIVELE@hour@ahead@4`
+- score: P1/P2 active, table `task`, filter `priorityIN1,2^active=true^sys_class_nameINincident,sc_req_item,sc_task,interaction`
+
+Recommended attention lists:
+
+- list: my assigned work, table `task`, filter `assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe^active=true^sys_class_nameINincident,sc_req_item,sc_task,interaction^ORDERBYDESCpriority^ORDERBYsys_updated_on`
+- list: my group's unassigned work, table `task`, filter `assignment_groupDYNAMICd6435e965f510100a9ad2572f2b47744^assigned_toISEMPTY^active=true^sys_class_nameINincident,sc_req_item,sc_task,interaction^ORDERBYDESCpriority^ORDERBYopened_at`
+- list: SLA breaching soon, table `task_sla`, filter `stageINin_progress,paused^planned_end_timeRELATIVELE@hour@ahead@4^ORDERBYplanned_end_time`
+- list: high priority active records, table `task`, filter `priorityIN1,2^active=true^sys_class_nameINincident,sc_req_item,sc_task,interaction^ORDERBYpriority^ORDERBYsys_updated_on`
+- list: stale work, table `task`, filter `assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe^active=true^sys_class_nameINincident,sc_req_item,sc_task,interaction^sys_updated_onRELATIVELE@dayofweek@ago@2^ORDERBYsys_updated_on`
+- list: waiting/on hold, table `task`, filter `assigned_toDYNAMIC90d1921e5f510100a9ad2572f2b477fe^active=true^stateIN3,4,-5^sys_class_nameINincident,sc_req_item,sc_task,interaction^ORDERBYsys_updated_on`
+- list: recently updated by me, table `task`, filter `sys_updated_by=admin^sys_updated_onRELATIVEGE@dayofweek@ago@7^sys_class_nameINincident,sc_req_item,sc_task,interaction^ORDERBYDESCsys_updated_on`
+- list: reopened incidents, table `incident`, filter `reopen_count>0^active=true^ORDERBYDESCreopen_count^ORDERBYsys_updated_on`
+
+Useful generic task columns: `number,sys_class_name,priority,state,short_description,assigned_to,assignment_group,sys_updated_on`.
 
 Known dynamic filter IDs:
 
