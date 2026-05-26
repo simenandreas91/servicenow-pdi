@@ -20,6 +20,7 @@ Default to the bundled PowerShell helpers for fast, narrow, repeatable work. Use
 - Create one update set per application scope. Do not deliver a mixed-scope update set.
 - Snapshot developer preferences before edits, switch scope/update set, confirm customer-update capture, then restore preferences.
 - Verify behavior with realistic role/channel/data conditions, not just record existence.
+- At the end of every ServiceNow task, capture one durable lesson if the work revealed a reusable pattern, trap, table detail, helper behavior, or app-specific fact. Update this skill or the most relevant `references/lessons-*.md` file before the final response.
 - Never print passwords, OAuth secrets, session tokens, auth profiles, or full credential records.
 - Ask one focused question only when the instance cannot answer it and a wrong assumption would change architecture, security, many records, licensing, credentials, or UI channel.
 
@@ -41,7 +42,9 @@ Default to the bundled PowerShell helpers for fast, narrow, repeatable work. Use
 7. Verify update capture with `Confirm-ServiceNowUpdateCapture.ps1` or `Get-ServiceNowUpdateSetSummary.ps1`.
 8. Test behavior using Table API, Xplore, browser/UI, events, flows, role-aware checks, or integration logs as appropriate.
 9. Clean test data and unintended customer updates.
-10. Restore preferences and report artifacts, update set, tests, rollback, risks, assumptions, and manual steps.
+10. Restore preferences.
+11. Self-improve: add or refine a concise lesson in this skill or a relevant `references/lessons-*.md` file when the task produced durable knowledge. Prefer focused bullets over broad retrospectives; do not store secrets, customer-sensitive data, or noisy one-off details.
+12. Report artifacts, update set, tests, rollback, risks, assumptions, manual steps, and any skill lesson updated.
 
 ## Instance Access
 
