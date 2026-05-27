@@ -20,6 +20,12 @@ Use this when creating or modifying Platform Analytics dashboards (`par_dashboar
 7. For a generated workspace update set, a broad `Confirm-ServiceNowUpdateCapture.ps1` may report pre-existing mixed-scope rows. Narrow-check dashboard rows in `sys_update_xml` by `nameSTARTSWITHpar_dashboard` and by widget `target_nameLIKE<stable prefix>`.
 8. Restore preferences.
 
+## Success Dashboard Apps
+
+- HR/ITSM Success Dashboard indicators are not ordinary `par_dashboard` dashboards. Verify them through Store app/scopes such as `sn_sd`, `sn_sd_common`, `sn_sd_hrsm`, `sn_sd_itsm`, navigation module `now/success-dashboard/home`, Success Dashboard tables (`sn_sd_*`), Self-Service Analytics tables (`ssa_*`), and PA jobs/indicators.
+- In Vår Energi DEV on 2026-05-27, HR Success Dashboard indicators (`sn_sd_hrsm`), Success Dashboard Core (`sn_sd`), Success Dashboard Common (`sn_sd_common`), Self-Service Analytics Core (`sn_ssa_core`), PA Premium, PA, and HR PA content pack (`com.sn_hr_pa`) were installed. The `[SD HRSM] Daily Data Collection` and `[SD HRSM] Historic Data Collection` jobs existed but were inactive.
+- For Vår Energi STRY0010074, the OOTB HR Analytics Center dashboards existed in DEV as `par_dashboard` records: `HR Agent`, `HR Case Dashboard`, `HR Manager`, `Human Resources Overview`, `Manager Dashboard`, and `SLA Dashboard`. The relevant HR PA data jobs were `[PA HR Case] Daily Data Collection` and `[PA HR Case] Historic Data Collection` in `sn_hr_pa`; both were inactive before activation on 2026-05-27.
+
 ## Indicator Backend Model
 
 Platform Analytics still uses the Performance Analytics backend for indicators, sources, breakdowns, scores, and collection jobs. In the PDI, the key tables are:
