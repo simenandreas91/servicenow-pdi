@@ -17,6 +17,7 @@ Use this file before starting Vår Energi stories. It captures practical instanc
 ## DEV Context
 
 - DEV profile is `other`; instance URL is `https://varenergidev.service-now.com`.
+- Vår Energi sandbox can be reached with profile `other` by passing `-Instance 'https://varenergisandbox.service-now.com'`. Table API worked on 2026-05-27, and Xplore became available after installing Xplore: Developer Toolkit 5.02.
 - Xplore is available in DEV after Xplore: Developer Toolkit 5.02 was installed. Prefer Xplore for compact read-only verification and constrained behavior checks.
 - Current DEV API/Xplore user sys_id seen on 2026-05-19: `38c17f3fcc980310b214a0b7a2acbbef` (`simen.knudsen@varenergi.no`).
 - The default user sys_id in `Set-ServiceNowUpdateSetContext.ps1` is not correct for Vår Energi DEV. Pass `-UserSysId '38c17f3fcc980310b214a0b7a2acbbef'`.
@@ -184,3 +185,12 @@ Step-by-step:
 - The `Insert Date` action inserts `${Date}` or target-table date/date-time fields via `sn_doc_field_tree`; it is not participant-aware and does not insert a signing-date token.
 - STRY0010036 implemented automatic replacement of `${sign_date:<participant>}` when `${signature:<participant>}` is saved, using `signature_image.signed_on` and the template date format when available.
 - Keep demo records unless Simen asks to clean them up; he wanted to inspect the demo data.
+
+## Compendia Knowledge Sandbox Lesson
+
+- For Compendia Personalhandbok sync in Vår Energi sandbox, the API contract verified on 2026-05-27 was OAuth client credentials at `https://api.compendia.no/oauth/v2/token` and pages under `/varenergi/personal/api/v1/pages`; the list endpoint returned 142 pages and page `1248946` mapped cleanly to a draft HR knowledge article with Compendia tags in `kb_knowledge.meta`.
+- In sandbox on 2026-05-27, Table API could create and read a draft article in `Human Resources General Knowledge`, but Xplore/GlideRecord could not read that same HR knowledge article by `sys_id`, `number`, `short_description`, or custom source field, even after admin impersonation. Do not enable a scheduled server-side sync until the HR knowledge visibility/query behavior is resolved, or the sync may duplicate articles.
+- Moving the sample Compendia article into a dedicated `Compendia` knowledge base resolved the sandbox GlideRecord visibility issue for that article. The Script Include idempotency check then updated page `1248946` in place with one matching `kb_knowledge` record.
+- The Compendia sync loop should scan the full page list but only count new/changed pages toward `varenergi.compendia.sync.max_per_run`; otherwise each daily run repeats the first N pages. In sandbox, `VECompendiaKnowledgeSync.syncAll(limit, true)` dry-run mode verified this behavior without creating articles.
+- The Compendia page API response did not expose author, created-by, or updated-by metadata on 2026-05-27; available page fields were ID, title, content, URL, created/modified dates, tags, and blocks. Original-author attribution in ServiceNow requires Compendia to expose author data or a separate page-author endpoint.
+- Auto-publish is controlled by `varenergi.compendia.sync.auto_publish` and defaults to false. When true, the sync sets `workflow_state=published` and a published date; when false, it keeps articles draft and clears the published date on sync updates.
