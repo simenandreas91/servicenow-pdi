@@ -1,4 +1,9 @@
 .vscode/nowdev-ai-config.json
+.env
+.venv/
+__pycache__/
+node_modules/
+uploads/
 .servicenow-index/
 .servicenow-cache/
 .github/agents/NowDev-AI-AI-Agent-Developer.agent.md
