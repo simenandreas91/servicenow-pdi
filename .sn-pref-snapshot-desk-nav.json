@@ -1,0 +1,25 @@
+{
+  "user_sys_id": "6816f79cc0a8016401c5a33be04be441",
+  "scope_sys_id": "bb601c76c3b48b1065eefdec050131ee",
+  "captured_at": "2026-05-15T10:27:19.2498717+00:00",
+  "preferences": [
+    {
+      "name": "apps.current_app",
+      "existed": true,
+      "sys_id": "35697326c3f00b1065eefdec05013140",
+      "value": "d4ac3fff5b311200a4656ede91f91af2"
+    },
+    {
+      "name": "sys_update_set",
+      "existed": true,
+      "sys_id": "f360dc76c3b48b1065eefdec05013111",
+      "value": "7f60dc76c3b48b1065eefdec0501310e"
+    },
+    {
+      "name": "updateSetForScopebb601c76c3b48b1065eefdec050131ee",
+      "existed": true,
+      "sys_id": "bb60dc76c3b48b1065eefdec0501310f",
+      "value": "7f60dc76c3b48b1065eefdec0501310e"
+    }
+  ]
+}
