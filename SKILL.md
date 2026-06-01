@@ -354,9 +354,10 @@ Immediate stop-and-confirm cases:
 1. Run `Get-ServiceNowPdiHealth.ps1` when starting substantial work; note current update set, current app, stale in-progress update-set count, and API fallback status.
 2. Before writes, snapshot preferences and set the intended scope/update set with `Set-ServiceNowUpdateSetContext.ps1`.
 3. During work, confirm captured rows belong to the intended application. Mixed scope is a warning unless it is an understood platform-generated pattern.
-4. Leave unrelated in-progress update sets alone. Clean only throwaway data, accidental customer updates from the current task, or update-set noise that is clearly caused by this run.
-5. Ask before completing/exporting when the summary shows mixed scope, unexpected application, broad form/layout noise, or records outside the named task.
-6. Restore preferences before handoff and report whether the restored state matches the snapshot.
+4. Create batch/parent update sets in Global scope, even when the child update sets span scoped applications. If Table API creation follows the current application preference, switch to Global before creating the batch or correct the batch application with a constrained Global script before attaching children.
+5. Leave unrelated in-progress update sets alone. Clean only throwaway data, accidental customer updates from the current task, or update-set noise that is clearly caused by this run.
+6. Ask before completing/exporting when the summary shows mixed scope, unexpected application, broad form/layout noise, or records outside the named task.
+7. Restore preferences before handoff and report whether the restored state matches the snapshot.
 
 ## Output Contract
 

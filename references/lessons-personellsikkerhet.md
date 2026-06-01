@@ -16,6 +16,7 @@ Durable notes for Simen's `x_personellsikkerh` Personellsikkerhet app on PDI `de
 - `PersonellsikkerhetOppgaveManager` owns reklarering task creation and status transitions. Prefer extending this Script Include for process logic instead of duplicating transition rules in Business Rules or UI Actions.
 - `PersonellsikkerhetAnsattOppgaveManager` owns follow-up notifications/tasks after FSA approval.
 - `PersonellsikkerhetUserSync` maps from `sys_user` and `sn_hr_core_profile` into person records. On the current PDI, scoped read access to `sn_hr_core_profile` may be missing, producing `ScopeAccessNotGrantedException`; inspect/fix cross-scope access before relying on it for bulk sync.
+- The person-to-user security-field sync is the Business Rule `Sync security fields to user` on `x_personellsikkerh_personellsikkerhet`; extend it in place for `navn`, `sikkerhetsklareringsniv`, `autorisasjonsniva`, `autorisasjonsdato`, and `gyldig_klarering_til` instead of adding duplicate user update rules. The user expiry field label `Utløpsdato sikkerhetsklarering` has element `u_utl_psdato_sikkerhetsklarering`.
 
 ## Notifications And Events
 

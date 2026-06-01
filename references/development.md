@@ -127,7 +127,7 @@ update_set=<sys_update_set.sys_id>
 ### Update Set Batches
 
 - Update set batching is represented directly on `sys_update_set` in this PDI:
-  - parent batch record: `parent` empty, `base_update_set` points to itself, usually `application=global`
+  - parent batch record: `parent` empty, `base_update_set` points to itself, always create it in Global scope (`application=global`)
   - child update sets: both `parent` and `base_update_set` point to the batch update set sys_id
 - Before batching story update sets, query all similarly named update sets and summarize each candidate with `Get-ServiceNowUpdateSetSummary.ps1`. It is common to find earlier probe, empty, or mixed-scope update sets with the same story name.
 - If the user asks to batch "these update sets" or refers to a matching story/name without narrowing the scope, include every matching update set. Do not silently omit empty, probe, stale, or mixed-scope-looking sets; ask first or include them and report the risk.
