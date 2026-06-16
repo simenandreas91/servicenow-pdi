@@ -2,6 +2,28 @@
 
 Load this file when creating or reviewing ServiceNow scripts, widgets, or API-heavy changes.
 
+## Minimality And Complexity Review
+
+Use this as a final design check before adding custom ServiceNow artifacts or expanding helper code. The useful idea from `DietrichGebert/ponytail` is a narrow complexity review: delete, use platform features, use existing helpers, then write the smallest correct change.
+
+For ServiceNow implementation, apply this ladder:
+
+1. Does this need to be built at all, or does an existing table setting, property, role, assignment rule, notification, template, report, UI policy, data policy, flow action, or portal/workspace option already cover it?
+2. Can an OOTB ServiceNow feature or native browser/platform behavior replace custom script, custom UI, or a new dependency?
+3. Can an existing bundled helper, Script Include, flow, widget option, UX config, or update-set workflow be reused instead of creating another wrapper?
+4. Can the change be a narrow record update rather than a new table, new Script Include, new Flow, new Scripted REST API, or React surface?
+5. If code is still needed, keep it boring, local, and directly tied to the current acceptance criteria.
+
+Review diffs for:
+
+- `delete`: dead flexibility, unused flags, speculative extension points, duplicate helpers, or scaffolding for "later".
+- `native`: custom logic that a ServiceNow platform feature, browser control, database constraint, ACL, UI policy, or Flow capability already handles.
+- `reuse`: new helper/script/include that only delegates to an existing helper or platform API.
+- `shrink`: same behavior with fewer records, fewer files, or a smaller script.
+- `verify`: minimality must not remove update-set capture checks, runtime behavior tests, security checks, data-loss protection, accessibility basics, or explicit user requirements.
+
+For deliberate shortcuts in local helper code, add a plain comment only when there is a known ceiling and upgrade trigger, such as "single-scope lookup; page across scopes if multi-scope inventory is required." Do not add `ponytail:` comments or any tool/agent wording to ServiceNow instance-visible records, scripts, work notes, comments, descriptions, update-set metadata, or test markers.
+
 ## Table API
 
 - Use `sysparm_fields` and `sysparm_limit` by default to keep responses small.

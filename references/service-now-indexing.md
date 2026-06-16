@@ -32,6 +32,15 @@ The useful idea from `scheidydude/codeindex` is the architecture:
 
 Do not use `codeindex` directly for this skill without adaptation: current repo analysis targets code files such as Python, JavaScript, Go, Java, PHP, Docker, CI, and schema files. It does not index ServiceNow records, Markdown references, or PowerShell helpers well out of the box.
 
+The useful idea from `cocoindex-io/cocoindex-code` is optional semantic discovery:
+
+1. use exact search (`rg`) and the ServiceNow metadata helpers first when names, table keys, or sys_ids are known.
+2. use `ccc` only when the query is conceptual or fuzzy, such as "where do we handle update-set noise", "workspace modal save pattern", or "approval rejection logic".
+3. keep semantic results as candidate pointers. Read the matched file/record context and verify live ServiceNow facts before edits.
+4. prefer local embeddings for ServiceNow-derived content. Do not send exported instance metadata, scripts, or customer-sensitive content to cloud embedding providers unless Simen explicitly approves it for that task.
+
+`ccc` is optional. Do not make it a required dependency for the skill or block ServiceNow work when it is unavailable.
+
 ## ServiceNow Index Shape
 
 Prefer a generated JSON or SQLite index outside the base skill context. Suggested files:
@@ -94,12 +103,38 @@ Check basic relationship impact:
 
 The impact helper is intentionally conservative. It uses deterministic metadata edges such as `runs_on`, `references`, `notifies`, `triggers`, and `secures`; it does not infer every dynamic script call.
 
+## Optional Semantic Search With ccc
+
+Use `cocoindex-code` / `ccc` as an exploratory layer over local files when exact search is too brittle. Good targets are this skill repository's Markdown references, PowerShell helpers, examples, and generated safe text exports. It is most useful for finding patterns by intent rather than identifier.
+
+Check availability:
+
+```powershell
+Get-Command ccc -ErrorAction SilentlyContinue
+```
+
+If installed, initialize or refresh the local index from the repository root:
+
+```powershell
+ccc init
+ccc index
+ccc search "workspace modal save pattern"
+ccc search --lang markdown "update set noise"
+ccc search --path "references/*" "approval rejection"
+```
+
+If `ccc` reports that the project is not initialized, run `ccc init`, then `ccc index`, then retry the search. If `ccc` is missing, fall back to `rg`, `Find-ServiceNowIndexedArtifact.ps1`, and focused file reads. Do not ask Simen to install it during a ServiceNow task unless semantic search is clearly the blocker.
+
+For ServiceNow instance metadata, do not point `ccc` directly at raw broad exports with scripts or sensitive records. If semantic search over instance metadata becomes useful repeatedly, create a separate sanitized export step that converts `.servicenow-index/*.json` into compact text chunks containing safe fields such as artifact table, sys_id, name, target table, scope, active state, and relationship summaries. Keep credential/auth tables, secrets, tokens, and unnecessary script bodies out of that export.
+
 ## What Not To Do
 
 - Do not add all OOTB Script Includes, all tables, or full script bodies to the skill prompt.
 - Do not trust a generated index as final truth before writes; ServiceNow metadata and ACL behavior must be verified live.
 - Do not index credential records, secrets, auth profile secrets, OAuth tokens, or session data.
 - Do not broad-scan production-like instances without explicit approval.
+- Do not make `ccc` or any embedding provider part of the default ServiceNow operating loop.
+- Do not use cloud embeddings for ServiceNow-derived content without explicit task-level approval.
 
 ## Current Limits
 
@@ -107,3 +142,4 @@ The impact helper is intentionally conservative. It uses deterministic metadata 
 - The builder intentionally skips credential/auth-profile tables.
 - The default artifact list is practical, not exhaustive. Add table configs only when repeated lookup justifies it.
 - Full script-body indexing can be useful for call searches, but prefer targeted live reads when the candidate set is already small.
+- `ccc` is semantic and approximate; it can miss exact records or return plausible but irrelevant matches.
