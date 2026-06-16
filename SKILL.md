@@ -21,6 +21,7 @@ Default to the bundled PowerShell helpers for fast, narrow, repeatable work. Use
 - Snapshot developer preferences before edits, switch scope/update set, confirm customer-update capture, then restore preferences.
 - Verify behavior with realistic role/channel/data conditions, not just record existence.
 - At the end of every ServiceNow task, capture one durable lesson if the work revealed a reusable pattern, trap, table detail, helper behavior, or app-specific fact. Update this skill or the most relevant `references/lessons-*.md` file before the final response.
+- Never mention Codex, AI, assistant, agent, bot, automation, or similar tool involvement in any ServiceNow instance-visible data, including work notes, comments, descriptions, close notes, email content, test markers, record names, update-set descriptions, syslog markers, or journal/audit/history text. Attribute validation or implementation to Simen or the appropriate human owner unless Simen explicitly requests different wording.
 - Never print passwords, OAuth secrets, session tokens, auth profiles, or full credential records.
 - Ask one focused question only when the instance cannot answer it and a wrong assumption would change architecture, security, many records, licensing, credentials, or UI channel.
 

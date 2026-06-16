@@ -211,6 +211,10 @@ Configuration checks:
 9. For AI agents, test one known record/task manually, one access-denied or restricted-role path, the selected workflow/agent version, tool execution/error behavior, and automated evaluations when result quality must be compared across cases.
 10. Capture final configuration records, roles, plugin versions, search profiles, workflow/agent versions, model/provider assumptions, and rollback/deactivation steps.
 
+## Vår Energi AI Search Assist Lessons
+
+- For General Inquiry AI Search Assist in Vår Energi DEV, `aisa_rp_config.search_app` overrides the older `cxs_rp_config` contextual-search behavior in Employee Center. On 2026-06-16, OOTB `ESC AISA Long text to query Search Application` used profile `[AI Search Assist - Long Text to Query] - KB and Catalog`, whose sources were HR General Knowledge plus generic Service Portal Catalog. If non-HR catalog items appear in the record producer suggestions, use or create a search application/profile that maps only to the HR knowledge source. Match the ServiceNow search-application pattern by adding one `sys_search_filter` Source Facet Bucket per mapped source; for HR-only General Inquiry that means a single `Knowledge` bucket for `[AISA - Long Text to Query] - knowledge`. After creating a new `ais_search_profile`, publish it before portal testing; `state=new` profiles can look fully configured but will not drive the AI Search Assist runtime. Expect ServiceNow to auto-capture companion suggestion reader groups in the same Global update set.
+
 ## Official Sources
 
 - ServiceNowDocs repository and release map: https://github.com/ServiceNow/ServiceNowDocs and `llms.txt`

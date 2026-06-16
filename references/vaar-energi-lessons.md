@@ -13,6 +13,7 @@ Use this file before starting Vår Energi stories. It captures practical instanc
 - Do not create `rm_story` records unless Simen explicitly asks. Treat PROD stories as source requirements and DEV update sets as the working delivery vehicle.
 - Re-read the PROD story immediately before continuing prior DEV work. Stories can change after an update set already exists; inspect the current DEV update set summary and target artifacts before deciding whether to revise, add, or leave prior captured rows.
 - When editing Vår Energi story fields, keep `description` as plain text with normal line breaks. Do not put HTML tags in `description`. HTML/list formatting is acceptable in `acceptance_criteria`, which is a rich-text field in the story form.
+- In Vår Energi instances, never mention Codex, AI, assistant, agent, bot, automation, or similar tool involvement in work notes, comments, test traces, record names, update-set descriptions, syslog markers, or other instance-visible text. Write story/test notes as Simen unless he supplies different wording.
 
 ## DEV Context
 
@@ -181,6 +182,10 @@ Step-by-step:
 10. Clean up temporary cases and `task_sla` rows. Avoid leaving test HR cases unless Simen asks to inspect them.
 11. Confirm update capture with `Get-ServiceNowUpdateSetSummary.ps1`. After the 2026-05-22 STRY0010050 update, a clean existing update set had four `SLA Definition` rows: 1-business-day response, 5-business-day resolution, and the two generic HR Case SLA exclusion updates, all in HR Core with no mixed scope.
 12. Final response should include story interpretation, update set name/sys_id/scope, SLA definition details, overlap prevention, runtime verification result, cleanup, and restored preferences.
+
+## HR Proposed Solution Auto-Close Pattern
+
+- For DEV update set `STRY0010053-55 - HR proposed solution auto-close`, runtime verification should create a General Inquiry HR case, move it to Awaiting Acceptance (`state=20`), then use work notes only for test trace. Public `comments` authored by the `opened_for` or `opened_by` user after `u_proposed_solution_at` are intentionally treated as employee responses and will suppress both the 3-business-day reminder and 7-business-day auto-close.
 
 ## Document Template Signing Date Lesson
 
