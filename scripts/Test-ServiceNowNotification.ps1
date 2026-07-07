@@ -68,7 +68,7 @@ if ($Trigger) {
   var gr = new GlideRecord('$safeTable');
   if (!gr.get('$safeSysId')) {
     result.error = 'record_not_found';
-    gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+    gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
     return;
   }
   gs.eventQueue('$safeEvent', gr, '$safeParm1', '$safeParm2');
@@ -77,7 +77,7 @@ if ($Trigger) {
   result.sys_id = gr.getUniqueValue();
   result.parm1 = '$safeParm1';
   result.parm2 = '$safeParm2';
-  gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+  gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
 })();
 "@
 

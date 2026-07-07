@@ -143,7 +143,7 @@ $script = @"
     },
     stale_update_set_sample: list('sys_update_set', staleQuery, ['sys_id', 'name', 'state', 'application', 'sys_updated_on'], 5)
   };
-  gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+  gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
 })();
 "@
 

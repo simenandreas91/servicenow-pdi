@@ -30,6 +30,58 @@ The **HR Service Additional Information** section on `sn_hr_core_service` contro
 - Scope matters. The OOTB scratchpad logic groups fields by dictionary scope and table hierarchy; fields in Global, the service table's scope, or inherited HR Core fields are handled. Cross-scope fields that are not inherited by the service table may not be controlled automatically.
 - Do not use this tab for initial intake questions. For Employee Center intake, use record producer variables. For HR agent case creation before the case exists, use `case_creation_service_config`. If a producer answer must become a case field, map/copy it into a real case field, then optionally expose that field through `service_table_fields`.
 
+## Record Producer Case Description Population
+
+PDI research on 2026-07-06 found two OOTB record producer script patterns:
+
+- Normal HR Services use `new sn_hr_core.hr_ServicesUtil(current, gs).createCaseFromProducer(producer, cat_item.sys_id);`. In the PDI, 42 active/inactive HR producer scripts with `createCaseFromProducer` use this line, mostly Employee Center Core producers on concrete COE tables such as Payroll, Operations, Workforce Administration, and Total Rewards.
+- Journey/Lifecycle Event HR Services use `new sn_hr_le.hr_ActivityUtils().createCaseFromProducer(current, producer, cat_item.sys_id);`. In the PDI, 7 producer scripts use this line, mostly Journey Designer producers on `sn_hr_le_case` plus the OOTB Parental Leave demo. `hr_ActivityUtils.createCaseFromProducer` is a thin wrapper that delegates to `new sn_hr_core.hr_ServicesUtil(current).createCaseFromProducer(producer, recordProducerId)`.
+
+Use the Journey/Lifecycle line for new HR Services when `sn_hr_core_service.fulfillment_type=journey`, the intake is backed by Lifecycle Event/Journey Designer metadata, or the service must create a Journey context. Use the Core line for simple/non-journey HR Services. Do not mix them only to change description behavior; both paths rely on the same Core `hr_ServicesUtil` and `hr_CaseUtils` logic for the question/answer output.
+
+The generated question/variable output path is:
+
+1. `hr_ServicesUtil.createCaseFromProducer(producer, rpId)` finds the active `sn_hr_core_service` whose `producer` equals the record producer sys_id.
+2. `_getProducerQuestions(producer, rpId)` uses `global.HRSecurityUtils().getRelevantVariablesForCatItem(rpId)`, reads submitted values from `producer['IO' + variable.id]`, resolves display values for references, list collectors, choices, dates, date-times, and MRVS rows, then creates question objects through `hr_CaseUtils.getQuestion(...)`.
+3. `hr_CaseUtils.populateCase(service, questions, 'self_service')` sets service/topic/template fields, subject/opened-for/profile/payload/common case fields, and calls `_setCommonFields(...)`.
+4. `_setCommonFields(...)` assigns:
+   - `current.description = this._getSimpleDescriptionFromAnswers(questions, serviceValue)`
+   - `current.rich_description = this._getDescriptionFromAnswers(questions, serviceValue)`
+5. `_getDescriptionFromAnswers(...)` starts with existing `current.description` converted from newlines to `<br>`, then appends `_getDetailsFromAnswers(..., RICH_DESCRIPTION_FIELD)`. The appended block begins with `The following fields have been provided:` and then `Question: answer` pairs separated by `<br/><br/>`. Non-HTML variable answers are HTML-escaped; HTML variable type `23` is not escaped by that OOTB path.
+
+For a one-off service-specific static intro, keep the OOTB call and prepend controlled static content after it runs:
+
+```javascript
+(function () {
+  current.opened_for = gs.getUserID();
+  current.subject_person = gs.getUserID();
+
+  new sn_hr_le.hr_ActivityUtils().createCaseFromProducer(current, producer, cat_item.sys_id);
+
+  prependRichDescription(
+    '<p><strong>Before HR starts processing:</strong></p>' +
+    '<p>This request will be reviewed against the approved staffing plan.</p>'
+  );
+
+  function prependRichDescription(introHtml) {
+    if (!introHtml) return;
+    var existing = current.getValue('rich_description') || '';
+    current.setValue('rich_description', introHtml + (existing ? '<br/><br/>' + existing : ''));
+  }
+})();
+```
+
+Use the Core call in the same shape for non-journey services. If the intro includes any dynamic value, escape it first with `GlideStringUtil.escapeHTML(String(value || ''))`. If plain `description` must mirror the same intro for integrations/reporting, prepend plain text to `current.description` as well; do not put HTML into plain `description` unless the target field/use case expects it.
+
+For many services or if business-owned intro text should be centrally maintained, prefer an additive implementation of extension point `sn_hr_core.HRPopulateCaseFields` over copying custom snippets into many record producers. That extension point runs after `hr_CaseUtils` builds `description` and `rich_description`; the Journey plugin already uses it through `sn_jny.jny_HRPopulateCaseFields` to create the Journey context. A custom implementation should:
+
+- implement `handles(hrService)` to match only intended services, preferably by stable service sys_id or `value`.
+- implement `setFields(hrService, hrCase)` to prepend controlled static HTML to `hrCase.rich_description`.
+- be registered in `sys_extension_instance` with `point=sn_hr_core.HRPopulateCaseFields`, `script_include=<custom include>`, active, and an order that does not conflict with OOTB Journey population.
+- avoid user-provided HTML and avoid changing OOTB `hr_CaseUtils`/`hr_ServicesUtil`.
+
+Do not use **HR Service Additional Information** for this. It controls service-specific fields/related lists on the HR case form after creation, not intake description rendering. Do not rely on the HR case template's `description`/`rich_description` for this prepend behavior either: the OOTB `Apply Template (before)` Business Rule runs after the producer script during insert and only fills blank fields, so it does not reliably seed the generated question output and can be confusing when combined with producer-generated descriptions.
+
 ## How Lifecycle Event Activities Work
 
 - An HR Service with `fulfillment_type=journey` points to a Lifecycle Event type (`le_type`), Journey config (`journey_config`), intake producer, and HR template.

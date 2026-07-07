@@ -154,7 +154,7 @@ if ($Raw) {
 }
 
 $decoded = [System.Net.WebUtility]::HtmlDecode($response.Content)
-$marked = [regex]::Match($decoded, '(?s)CODEX_RESULT_START\s*(.*?)\s*CODEX_RESULT_END')
+$marked = [regex]::Match($decoded, '(?s)(?:SN_RESULT_START|CODEX_RESULT_START)\s*(.*?)\s*(?:SN_RESULT_END|CODEX_RESULT_END)')
 if ($marked.Success) {
   $marked.Groups[1].Value.Trim()
   return

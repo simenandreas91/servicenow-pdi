@@ -69,7 +69,7 @@ if (!current.get('$(Escape-JsString $UpdateSetSysId)'))
   throw 'Update set not found: $(Escape-JsString $UpdateSetSysId)';
 var updateSetExport = new UpdateSetExport();
 var sysid = updateSetExport.exportUpdateSet(current);
-gs.info('CODEX_RESULT_START' + sysid + 'CODEX_RESULT_END');
+gs.info('SN_RESULT_START' + sysid + 'SN_RESULT_END');
 "@
 
 $xplore = Join-Path $PSScriptRoot 'Invoke-ServiceNowXploreScript.ps1'

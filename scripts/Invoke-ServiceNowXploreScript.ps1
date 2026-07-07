@@ -157,7 +157,7 @@ if ($result -and $result.logs) {
 }
 
 foreach ($text in $textCandidates) {
-  $marked = [regex]::Match($text, '(?s)CODEX_RESULT_START\s*(.*?)\s*CODEX_RESULT_END')
+  $marked = [regex]::Match($text, '(?s)(?:SN_RESULT_START|CODEX_RESULT_START)\s*(.*?)\s*(?:SN_RESULT_END|CODEX_RESULT_END)')
   if ($marked.Success) {
     $marked.Groups[1].Value.Trim()
     return

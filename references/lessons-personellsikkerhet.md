@@ -18,6 +18,7 @@ Durable notes for Simen's `x_personellsikkerh` Personellsikkerhet app on PDI `de
 - `PersonellsikkerhetAnsattOppgaveManager` owns follow-up notifications/tasks after FSA approval.
 - `PersonellsikkerhetUserSync` maps from `sys_user` and `sn_hr_core_profile` into person records. On the current PDI, scoped read access to `sn_hr_core_profile` may be missing, producing `ScopeAccessNotGrantedException`; inspect/fix cross-scope access before relying on it for bulk sync.
 - The person-to-user security-field sync is the Business Rule `Sync security fields to user` on `x_personellsikkerh_personellsikkerhet`; extend it in place for `navn`, `sikkerhetsklareringsniv`, `autorisasjonsniva`, `autorisasjonsdato`, and `gyldig_klarering_til` instead of adding duplicate user update rules. The user expiry field label `Utløpsdato sikkerhetsklarering` has element `u_utl_psdato_sikkerhetsklarering`.
+- When mirroring `sikkerhetsklareringsniv` choices to HR Lifecycle case field `sn_hr_le_case.u_sikkerhetsklareringsniva`, compare `sys_choice` rows by label/value/language/sequence/inactive/dependent value. ServiceNow captures the target field's full set as one `Choice list` update named `sys_choice_sn_hr_le_case_u_sikkerhetsklareringsniva`.
 
 ## Notifications And Events
 

@@ -22,7 +22,7 @@ $serverScript = @"
   var gr = new GlideRecord('$Table');
   if (!gr.get('$SysId')) {
     result.error = 'record_not_found';
-    gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+    gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
     return;
   }
 
@@ -44,7 +44,7 @@ $serverScript = @"
     });
   }
 
-  gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+  gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
 })();
 "@
 
