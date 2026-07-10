@@ -25,3 +25,6 @@
 .github/agents/NowDev-AI-Reviewer.agent.md
 .github/agents/NowDev-AI-Script-Developer.agent.md
 .github/agents/NowDev-AI.agent.md
+.env
+.env.*
+!.env.example
