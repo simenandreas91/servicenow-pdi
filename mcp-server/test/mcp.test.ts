@@ -41,8 +41,15 @@ test("read tools accept a scoped bearer token", async () => {
   const request = rpc("tools/call", { name: "servicenow_health", arguments: {} }, 4, { Authorization: "Bearer valid" });
   const response = await handleMcp(request, { authStore, client: fakeClient as never });
   assert.equal(response.status, 200);
-  const body = await response.json() as { result: { structuredContent: { result: { ok: boolean } } } };
-  assert.equal(body.result.structuredContent.result.ok, true);
+    const body = await response.json() as {
+    result: {
+      content: Array<{ type: string; text: string }>;
+      structuredContent: { result: { ok: boolean } };
+    };
+  };
+
+assert.equal(body.result.content[0]?.text, "Action completed.");
+assert.equal(body.result.structuredContent.result.ok, true);
 });
 
 function rpc(method: string, params: unknown, id: number, headers: Record<string, string> = {}): Request {

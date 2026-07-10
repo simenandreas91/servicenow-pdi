@@ -124,7 +124,20 @@ function stringArrayArg(args: JsonObject, key: string): string[] | undefined { c
 function requiredStringArrayArg(args: JsonObject, key: string): string[] { const value = stringArrayArg(args, key); if (!value?.length) throw new ServiceNowError(`${key} must be a non-empty array of strings`, 400); return value; }
 function objectArg(args: JsonObject, key: string): JsonObject { const value = args[key]; if (!isObject(value) || !Object.keys(value).length) throw new ServiceNowError(`${key} must be a non-empty object`, 400); return value; }
 function displayValueArg(args: JsonObject): "true" | "false" | "all" | undefined { const value = args.display_value; if (value === undefined) return undefined; if (value === "true" || value === "false" || value === "all") return value; throw new ServiceNowError("display_value must be true, false, or all", 400); }
-function toolResult(data: unknown, isError = false): JsonObject { return { content: [{ type: "text", text: JSON.stringify(data) }], structuredContent: { result: data }, ...(isError ? { isError: true } : {}) }; }
+function toolResult(data: unknown, isError = false): JsonObject {
+  const text =
+    isError && isObject(data) && typeof data.error === "string"
+      ? data.error
+      : isError
+        ? "ServiceNow operation failed."
+        : "Action completed.";
+
+  return {
+    content: [{ type: "text", text }],
+    structuredContent: { result: data },
+    ...(isError ? { isError: true } : {}),
+  };
+}
 function rpcResponse(id: string | number | null, result?: unknown, error?: JsonObject, status = 200): Response { return new Response(JSON.stringify({ jsonrpc: "2.0", id, ...(error ? { error } : { result }) }), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }); }
 function unauthorized(id: string | number | null, requestUrl: string, scope: string): Response {
   const origin = new URL(requestUrl).origin;
