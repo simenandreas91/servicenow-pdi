@@ -105,7 +105,8 @@ async function authorizationPage(url: URL, store: KeyValueStore): Promise<Respon
   const validation = await validateAuthorizationRequest(url.searchParams, store, url.origin);
   if ("error" in validation) return html(`<h1>Authorization failed</h1><p>${escapeHtml(validation.error)}</p>`, 400);
   const hidden = [...url.searchParams.entries()].map(([key, value]) => `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(value)}">`).join("\n");
-  return html(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Authorize ServiceNow PDI</title><style>body{font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem}input,button{font:inherit;padding:.7rem;width:100%;box-sizing:border-box;margin:.4rem 0}button{cursor:pointer}.box{background:#f4f4f4;padding:1rem;border-radius:.5rem;overflow-wrap:anywhere}</style></head><body><h1>Connect ServiceNow PDI</h1><p>Sign in with the private MCP owner password. This does not expose your ServiceNow password to ChatGPT.</p><div class="box"><strong>Client:</strong> ${escapeHtml(validation.clientName)}<br><strong>Redirect:</strong> ${escapeHtml(new URL(validation.redirectUri).origin)}<br><strong>Access:</strong> ${escapeHtml(validation.scope)}</div><form method="post" action="/oauth/authorize">${hidden}<label>Owner password<input name="owner_password" type="password" required autocomplete="current-password"></label><button type="submit">Authorize this client</button></form></body></html>`);
+  const redirectOrigin = new URL(validation.redirectUri).origin;
+  return html(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Authorize ServiceNow PDI</title><style>body{font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem}input,button{font:inherit;padding:.7rem;width:100%;box-sizing:border-box;margin:.4rem 0}button{cursor:pointer}.box{background:#f4f4f4;padding:1rem;border-radius:.5rem;overflow-wrap:anywhere}</style></head><body><h1>Connect ServiceNow PDI</h1><p>Sign in with the private MCP owner password. This does not expose your ServiceNow password to ChatGPT.</p><div class="box"><strong>Client:</strong> ${escapeHtml(validation.clientName)}<br><strong>Redirect:</strong> ${escapeHtml(redirectOrigin)}<br><strong>Access:</strong> ${escapeHtml(validation.scope)}</div><form method="post" action="/oauth/authorize">${hidden}<label>Owner password<input name="owner_password" type="password" required autocomplete="current-password"></label><button type="submit">Authorize this client</button></form></body></html>`, 200, redirectOrigin);
 }
 
 async function authorize(req: Request, store: KeyValueStore): Promise<Response> {
@@ -236,4 +237,15 @@ function isAllowedRedirect(uri: string): boolean {
 function escapeHtml(value: string): string { return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char); }
 async function parseJson(req: Request): Promise<Record<string, unknown>> { try { return await req.json() as Record<string, unknown>; } catch { return {}; } }
 function json(value: unknown, status = 200): Response { return new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } }); }
-function html(value: string, status = 200): Response { return new Response(value, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://chatgpt.com https://chat.openai.com; base-uri 'none'; frame-ancestors 'none'" } }); }
+function html(value: string, status = 200, formActionOrigin?: string): Response {
+  const formActions = ["'self'", "https://chatgpt.com", "https://chat.openai.com"];
+  if (formActionOrigin) formActions.push(formActionOrigin);
+  return new Response(value, {
+    status,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Content-Security-Policy": `default-src 'none'; style-src 'unsafe-inline'; form-action ${formActions.join(" ")}; base-uri 'none'; frame-ancestors 'none'`,
+    },
+  });
+}

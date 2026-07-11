@@ -16,7 +16,7 @@ The server exposes:
 - `servicenow_update_record`
 - `servicenow_delete_record`
 
-Credential tables are blocked, secret-like response fields are redacted, secret-like writes are rejected, reads require explicit fields and are capped at 100 records, writes target one record, and deletes require an environment switch, a table allowlist, and an exact confirmation string. OAuth registration accepts ChatGPT callbacks only, tokens are resource-bound, and login/token endpoints are rate-limited.
+Credential tables are blocked, secret-like response fields are redacted, secret-like writes are rejected, reads require explicit fields and are capped at 100 records, writes target one record, and deletes require an environment switch, a table allowlist, and an exact confirmation string. OAuth registration accepts ChatGPT callbacks and, when explicitly enabled, Codex Desktop loopback callbacks on `127.0.0.1` or `localhost`; tokens are resource-bound, and login/token endpoints are rate-limited.
 
 ## Deploy on Netlify
 
@@ -33,6 +33,7 @@ Credential tables are blocked, secret-like response fields are redacted, secret-
    - `SN_ADDITIONAL_BLOCKED_TABLES=`
    - `MCP_OWNER_PASSWORD=<long unique password used only on the OAuth login page>`
    - `MCP_TOKEN_PEPPER=<at least 32 cryptographically random bytes, Base64 is fine>`
+   - `MCP_ALLOW_LOCAL_REDIRECTS=true` when Codex Desktop must connect; omit or set false for hosted-only clients
 4. Deploy and verify `https://<netlify-site>/healthz` returns `{"ok":true}`.
 5. Start with the smallest practical `SN_WRITE_TABLES` list. For unrestricted development in this disposable PDI, `*` is supported but deliberately explicit.
 6. Keep deletes disabled and `SN_DELETE_TABLES` empty initially. Enable only the exact cleanup tables when genuinely needed.
@@ -56,6 +57,16 @@ Run it twice and use separate values for `MCP_OWNER_PASSWORD` and `MCP_TOKEN_PEP
 5. Enable the new app for the conversation and call `servicenow_health` first.
 
 If the app was already connected when tools changed, refresh the app from its Plugin details page.
+
+## Connect Codex Desktop
+
+1. Set `MCP_ALLOW_LOCAL_REDIRECTS=true` with Functions scope and deploy production.
+2. Install or enable the `servicenow-pdi` plugin in Codex Desktop.
+3. Start a fresh connection so Codex dynamically registers its `http://127.0.0.1:<dynamic-port>/...` callback.
+4. Complete OAuth using `MCP_OWNER_PASSWORD`. Do not enter the ServiceNow password in Codex.
+5. Start a new task and call `servicenow_health` first.
+
+The authorization page adds only the exact registered and validated loopback origin to its `form-action` CSP. Arbitrary HTTP callback hosts remain rejected.
 
 ## Operating Rules
 

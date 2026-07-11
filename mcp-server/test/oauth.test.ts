@@ -5,6 +5,7 @@ import { handleOAuth, type KeyValueStore } from "../src/oauth.js";
 
 process.env.MCP_OWNER_PASSWORD = "owner-password";
 process.env.MCP_TOKEN_PEPPER = "test-pepper-that-is-not-used-in-production";
+process.env.MCP_ALLOW_LOCAL_REDIRECTS = "true";
 
 class MemoryStore implements KeyValueStore {
   values = new Map<string, unknown>();
@@ -45,6 +46,32 @@ test("dynamic registration rejects non-ChatGPT redirect URIs", async () => {
   const store = new MemoryStore();
   const response = await handleOAuth(new Request("https://mcp.example.com/oauth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ redirect_uris: ["https://evil.example/callback"] }) }), store, "203.0.113.1");
   assert.equal(response.status, 400);
+});
+
+test("Codex desktop loopback authorization uses the validated callback origin", async () => {
+  const store = new MemoryStore();
+  const redirectUri = "http://127.0.0.1:55819/oauth/callback";
+  const registration = await handleOAuth(new Request("https://mcp.example.com/oauth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ redirect_uris: [redirectUri], client_name: "Codex" }) }), store, "203.0.113.3");
+  assert.equal(registration.status, 201);
+  const registered = await registration.json() as { client_id: string };
+
+  const params = new URLSearchParams({ response_type: "code", client_id: registered.client_id, redirect_uri: redirectUri, code_challenge: "challenge", code_challenge_method: "S256", scope: "servicenow.read servicenow.write", resource: "https://mcp.example.com/mcp", state: "desktop-state" });
+  const authorizationPage = await handleOAuth(new Request(`https://mcp.example.com/oauth/authorize?${params}`), store, "203.0.113.3");
+  assert.equal(authorizationPage.status, 200);
+  assert.match(authorizationPage.headers.get("content-security-policy") ?? "", /form-action 'self' https:\/\/chatgpt\.com https:\/\/chat\.openai\.com http:\/\/127\.0\.0\.1:55819;/);
+
+  const form = new URLSearchParams(params);
+  form.set("owner_password", "owner-password");
+  const authorization = await handleOAuth(new Request("https://mcp.example.com/oauth/authorize", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form }), store, "203.0.113.3");
+  assert.equal(authorization.status, 302);
+  const callback = new URL(authorization.headers.get("location") ?? "");
+  assert.equal(callback.origin, "http://127.0.0.1:55819");
+  assert.equal(callback.pathname, "/oauth/callback");
+  assert.equal(callback.searchParams.get("state"), "desktop-state");
+  assert.ok(callback.searchParams.get("code"));
+
+  const unrelated = await handleOAuth(new Request("https://mcp.example.com/oauth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ redirect_uris: ["http://unrelated.example/callback"] }) }), store, "203.0.113.4");
+  assert.equal(unrelated.status, 400);
 });
 
 test("authorization rejects a token resource for a different MCP server", async () => {
