@@ -37,6 +37,12 @@ test("initialize and tools/list are available before OAuth", async () => {
       ),
     ),
   );
+  assert.ok(
+    TOOLS.every((tool) =>
+      tool.name === "servicenow_list_profiles" ||
+      ((tool.inputSchema.required as unknown[]) ?? []).includes("profile"),
+    ),
+  );
 
   const future = await handleMcp(
     rpc("initialize", { protocolVersion: "2099-01-01" }, 9),
@@ -92,7 +98,7 @@ test("tool calls return an OAuth challenge when unauthenticated", async () => {
   );
 });
 
-test("read tools accept a scoped bearer token", async () => {
+test("read tools accept a scoped bearer token and explicit profile", async () => {
   const authStore = readAuthStore();
   const fakeClient = {
     health: async () => ({ ok: true }),
@@ -100,7 +106,7 @@ test("read tools accept a scoped bearer token", async () => {
 
   const request = rpc(
     "tools/call",
-    { name: "servicenow_health", arguments: {} },
+    { name: "servicenow_health", arguments: { profile: "pdi" } },
     4,
     { Authorization: "Bearer valid" },
   );
@@ -123,6 +129,28 @@ test("read tools accept a scoped bearer token", async () => {
 
   assert.equal(body.result.content[0]?.text, "Action completed.");
   assert.equal(body.result.structuredContent.result.ok, true);
+});
+
+test("all instance-bound tools require an explicit profile", async () => {
+  const response = await handleMcp(
+    rpc(
+      "tools/call",
+      { name: "servicenow_health", arguments: {} },
+      45,
+      { Authorization: "Bearer valid" },
+    ),
+    {
+      authStore: readAuthStore(),
+      client: { health: async () => ({ ok: true }) } as never,
+    },
+  );
+
+  const body = await response.json() as {
+    result: { isError?: boolean; content: Array<{ text: string }> };
+  };
+
+  assert.equal(body.result.isError, true);
+  assert.match(body.result.content[0]?.text ?? "", /profile is required/i);
 });
 
 test("tool calls route to the explicitly selected profile", async () => {
@@ -349,6 +377,7 @@ test("table shape forwards field and choice filters", async () => {
     {
       name: "servicenow_table_shape",
       arguments: {
+        profile: "pdi",
         table: "incident",
         fields: ["short_description", "priority"],
         include_choices: false,

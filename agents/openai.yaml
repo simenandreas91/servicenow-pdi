@@ -1,4 +1,15 @@
 interface:
-  display_name: "ServiceNow PDI"
-  short_description: "Design, implement, and verify ServiceNow changes in Simen's PDI with OOTB-first analysis."
-  default_prompt: "Use the ServiceNow PDI skill to inspect the instance, check OOTB options first, implement narrow ServiceNow artifacts through the safest available helpers, verify update-set capture and behavior, and report tests plus rollback notes."
+  display_name: "ServiceNow Development"
+  short_description: "Build and debug ServiceNow safely"
+  default_prompt: "Use $servicenow-pdi to select the intended instance profile, inspect live evidence, choose the smallest OOTB-first implementation, and verify behavior, transport, and rollback."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "servicenow-pdi"
+      description: "Required multi-instance ServiceNow MCP tools for profile discovery, health, narrow reads, schema inspection, and guarded writes"
+      transport: "streamable_http"
+      url: "https://servicenow-pdi.netlify.app/mcp"
+
+policy:
+  allow_implicit_invocation: true

@@ -127,7 +127,60 @@ test("query sends narrow Table API parameters and redacts secret fields", async 
     requested?.searchParams.get("sysparm_fields"),
     "sys_id,name",
   );
+  assert.equal(
+    requested?.searchParams.get("sysparm_display_value"),
+    "false",
+  );
   assert.equal(result[0]?.client_secret, "[REDACTED]");
+});
+
+test("sys_properties redaction handles display_value all wrappers", async () => {
+  const client = new ServiceNowClient({
+    instance: "https://dev000000.service-now.com",
+    username: "admin",
+    password: "pw",
+    fetchImpl: async () => jsonResponse({
+      result: [
+        {
+          name: {
+            display_value: "integration.password",
+            value: "integration.password",
+          },
+          value: {
+            display_value: "visible-secret",
+            value: "visible-secret",
+          },
+        },
+      ],
+    }),
+  });
+
+  const result = await client.query("sys_properties", {
+    fields: ["name", "value"],
+    displayValue: "all",
+  });
+
+  assert.equal(result[0]?.value, "[REDACTED]");
+});
+
+test("get defaults to raw display values", async () => {
+  let requested: URL | undefined;
+  const client = new ServiceNowClient({
+    instance: "https://dev000000.service-now.com",
+    username: "admin",
+    password: "pw",
+    fetchImpl: async input => {
+      requested = new URL(input.toString());
+      return jsonResponse({ result: { sys_id: "a".repeat(32) } });
+    },
+  });
+
+  await client.get("incident", "a".repeat(32), ["sys_id"]);
+
+  assert.equal(
+    requested?.searchParams.get("sysparm_display_value"),
+    "false",
+  );
 });
 
 test("writes are gated and secret-like fields are blocked", async () => {

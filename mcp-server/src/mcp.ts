@@ -57,6 +57,7 @@ const TOOLS: ToolDefinition[] = [
       profile: profileProperty(),
     },
     true,
+    ["profile"],
   ),
 
   tool(
@@ -68,12 +69,12 @@ const TOOLS: ToolDefinition[] = [
       table: str("ServiceNow table name"),
       query: str("Encoded query", false),
       fields: arr("Explicit fields to return"),
-      limit: int("Maximum records, capped at 100", false),
+      limit: int("Maximum records, capped at 100", false, 1, 100),
       offset: int("Pagination offset", false),
       display_value: enumString(["true", "false", "all"], false),
     },
     true,
-    ["table", "fields"],
+    ["profile", "table", "fields"],
   ),
 
   tool(
@@ -88,7 +89,7 @@ const TOOLS: ToolDefinition[] = [
       display_value: enumString(["true", "false", "all"], false),
     },
     true,
-    ["table", "sys_id", "fields"],
+    ["profile", "table", "sys_id", "fields"],
   ),
 
   tool(
@@ -107,7 +108,7 @@ const TOOLS: ToolDefinition[] = [
       ),
     },
     true,
-    ["table"],
+    ["profile", "table"],
   ),
 
   tool(
@@ -245,8 +246,8 @@ export async function handleMcp(
       },
       serverInfo: {
         name: "servicenow-pdi",
-        title: "Simen's ServiceNow instances",
-        version: "1.1.0",
+        title: "ServiceNow Development",
+        version: "2.0.0",
       },
       instructions:
         "List profiles first and pass the intended profile explicitly. Inspect before writing. Prefer supported OOTB ServiceNow configuration. Use narrow reads with explicit fields. Before writes, verify profile health, read the target, set scope/update set when needed, patch one sys_id, and validate afterward. Never request or return credentials or secret fields.",
@@ -324,11 +325,11 @@ export async function handleMcp(
     requestedProfile = profileArg(args);
 
     if (
-      definition.annotations.readOnlyHint !== true &&
+      name !== "servicenow_list_profiles" &&
       !requestedProfile
     ) {
       throw new ServiceNowError(
-        "profile is required for ServiceNow write tools",
+        "profile is required for every instance-bound ServiceNow tool",
         400,
       );
     }
@@ -351,7 +352,7 @@ export async function handleMcp(
       JSON.stringify({
         event: "mcp_tool",
         tool: name,
-        profile: requestedProfile || "default",
+        profile: requestedProfile || "none",
         table: stringArg(args, "table", false),
         sys_id: stringArg(args, "sys_id", false),
         ok: true,
@@ -373,7 +374,7 @@ export async function handleMcp(
       JSON.stringify({
         event: "mcp_tool",
         tool: name,
-        profile: requestedProfile || "default",
+        profile: requestedProfile || "none",
         table: stringArg(args, "table", false),
         sys_id: stringArg(args, "sys_id", false),
         ok: false,
@@ -430,7 +431,7 @@ async function callTool(
         stringArg(args, "table"),
         stringArg(args, "sys_id"),
         requiredStringArrayArg(args, "fields"),
-        displayValueArg(args) ?? "all",
+        displayValueArg(args) ?? "false",
       );
 
     case "servicenow_table_shape": {
@@ -534,7 +535,7 @@ function profileProperty(): JsonObject {
   return {
     type: "string",
     description:
-      "Configured ServiceNow profile key. Omit only to use SN_DEFAULT_PROFILE.",
+      "Profile key returned by servicenow_list_profiles; required on every instance-bound call.",
     pattern: "^[a-z][a-z0-9_]{0,31}$",
   };
 }
@@ -566,11 +567,14 @@ function arr(
 function int(
   description: string,
   required = true,
+  minimum = 0,
+  maximum?: number,
 ): JsonObject {
   return {
     type: "integer",
     description,
-    minimum: 0,
+    minimum,
+    ...(maximum !== undefined ? { maximum } : {}),
     ...(required ? {} : {}),
   };
 }

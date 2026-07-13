@@ -1,0 +1,39 @@
+{
+  "name": "servicenow-pdi",
+  "version": "2.0.0",
+  "description": "Develop safely across configured ServiceNow instances through guarded MCP tools and an OOTB-first engineering workflow.",
+  "author": {
+    "name": "Simen Andreas",
+    "url": "https://github.com/simenandreas91"
+  },
+  "homepage": "https://github.com/simenandreas91/servicenow-pdi",
+  "repository": "https://github.com/simenandreas91/servicenow-pdi",
+  "keywords": [
+    "servicenow",
+    "pdi",
+    "mcp",
+    "development",
+    "multi-instance",
+    "hrsd"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "ServiceNow Development",
+    "shortDescription": "Build and debug ServiceNow safely.",
+    "longDescription": "Connects Codex to configured ServiceNow instances through an OAuth-protected multi-instance MCP server and adds an OOTB-first workflow for safe development, debugging, delivery, rollback, and verification.",
+    "developerName": "Simen Andreas",
+    "category": "Productivity",
+    "capabilities": [
+      "Explicit multi-instance profile routing",
+      "Guarded ServiceNow record reads, table inspection, and writes",
+      "Scoped development, debugging, rollback, and delivery guidance"
+    ],
+    "websiteURL": "https://github.com/simenandreas91/servicenow-pdi",
+    "defaultPrompt": [
+      "Inspect configured ServiceNow profiles and development context.",
+      "Implement this story in the correct instance and update set.",
+      "Debug this ServiceNow behavior and verify the fix."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

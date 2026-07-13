@@ -91,7 +91,7 @@ When UI creation is unavailable and the task is a PDI/demo, this worked reliably
 
 ## PDI Demo Findings
 
-Demo app built on 2026-05-24:
+Historical demo app built on 2026-05-24. Its names predate the current no-tool-attribution rule; inspect it for platform behavior only and never copy its names into new instance-visible artifacts:
 
 - App: `Codex Scoped Demo`
 - Scope/package: `x_simen_codex_demo`

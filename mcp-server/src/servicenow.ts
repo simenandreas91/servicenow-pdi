@@ -363,7 +363,7 @@ export class ServiceNowClient {
 
     params.set(
       "sysparm_display_value",
-      input.displayValue ?? "all",
+      input.displayValue ?? "false",
     );
 
     params.set(
@@ -382,7 +382,7 @@ export class ServiceNowClient {
     table: string,
     sysId: string,
     fields?: string[],
-    displayValue: "true" | "false" | "all" = "all",
+    displayValue: "true" | "false" | "all" = "false",
   ): Promise<JsonObject | null> {
     this.validateTable(table);
     this.validateSysId(sysId);
@@ -681,9 +681,11 @@ function sanitizeTablePayload(
 
     const record = item as JsonObject;
 
+    const propertyName = tableApiScalar(record.name);
+
     if (
-      typeof record.name === "string" &&
-      SECRET_VALUE_HINT_RE.test(record.name) &&
+      propertyName !== undefined &&
+      SECRET_VALUE_HINT_RE.test(propertyName) &&
       "value" in record
     ) {
       record.value = "[REDACTED]";
@@ -694,6 +696,31 @@ function sanitizeTablePayload(
 
   visit(clean);
   return clean;
+}
+
+function tableApiScalar(
+  value: unknown,
+): string | undefined {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (
+    value &&
+    typeof value === "object"
+  ) {
+    const wrapped = value as JsonObject;
+
+    if (typeof wrapped.value === "string") {
+      return wrapped.value;
+    }
+
+    if (typeof wrapped.display_value === "string") {
+      return wrapped.display_value;
+    }
+  }
+
+  return undefined;
 }
 
 function tableFromPath(

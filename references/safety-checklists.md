@@ -2,14 +2,25 @@
 
 Use these checklists before operations that can affect security, data, deployment, or user-facing behavior. If a checklist item cannot be verified, call it out in the final response.
 
+## Before Any Mutation
+
+- Confirm the explicit MCP profile, instance URL, authenticated user, environment, write/delete gates, and the user's requested scope. Admin access and an enabled write gate are capability, not authorization.
+- Classify the target as deployable configuration, reference/seed/system data, runtime/business data, or secret material. Use the application's existing supported transport; do not assume an update set captures the change.
+- Read the exact target and retain its pre-state. Define rollback for the mutation and its side effects before writing.
+- Confirm application scope, ownership, table inheritance, domain separation, applicable plugin/release, intended persona, UI/API channel, and expected record volume when relevant.
+- Use synthetic/minimal test data and avoid returning HR, customer, or credential fields that are not needed for evidence.
+- A diagnosis/review request remains read-only. Stop before a fix unless the user asked to implement it.
+
 ## Update Sets
 
+- Use update sets only for eligible configuration/application artifacts. Never force ordinary business data, secrets, or unsupported artifacts into `sys_update_xml`.
 - Confirm target scope from the original artifact before creating the update set.
 - Use one update set per `sys_update_xml.application`.
-- Snapshot `apps.current_app`, `sys_update_set`, and `updateSetForScope<scope_sys_id>` before edits.
+- Snapshot `apps.current_app`, `sys_update_set`, and `updateSetForScope<scope_sys_id>` for the authenticated integration user before edits.
 - Verify the current app and scoped update set immediately before writes.
 - After writes, summarize `sys_update_xml` rows and check for mixed scope, Default leakage, duplicate stale updates, form-layout noise, and cross-scope privilege records.
-- If a legitimate app file did not capture, force capture with `Save-ServiceNowCustomerUpdate.ps1`, then re-check payload and application.
+- If an eligible app file did not capture, prefer re-saving through the supported form/Studio/builder. Use `Save-ServiceNowCustomerUpdate.ps1` only when it supports the exact verified profile and the artifact is known to be update-set eligible; then re-check payload and application. Otherwise report delivery as incomplete.
+- Do not hand-edit `sys_update_xml.payload`. Use the supported authoring channel and recapture the target artifact.
 - Restore preferences before handoff.
 - Rollback plan: back out update set where appropriate, deactivate additive records, restore previous field values, or move unintended customer updates out of the delivery update set.
 

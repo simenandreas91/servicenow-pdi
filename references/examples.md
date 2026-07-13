@@ -53,7 +53,7 @@ $script = @'
   if (grUser.next()) {
     result.activeUsers = parseInt(grUser.getAggregate('COUNT'), 10);
   }
-  gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+  gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
 })();
 '@
 

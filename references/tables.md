@@ -109,7 +109,7 @@ PDI verified:
 - Direct `sn_ws.RESTMessageV2()` outbound calls to JSONPlaceholder work.
 - `sys_outbound_http_log` captured the test call with `response_status=200`.
 - Admin can create/write REST Message, HTTP Method, connection alias, connection, basic auth profile, and ATF records.
-- Global practice records:
+- Historical Global practice records (inspect only; do not copy the tool-attributed names into new instance-visible artifacts):
   - Story `STRY0010006`.
   - Update set `CODX - Public API practice integration`.
   - REST Message `Codex Public API Practice` (`ce9afdefc3608bd06b68770d05013157`).

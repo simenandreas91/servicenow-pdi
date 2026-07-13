@@ -50,12 +50,11 @@ https://developer.servicenow.com/print_page.do?category=course-module&identifier
 
 ## Story Delivery Workflow
 
-Use this flow only when the user explicitly asks for a story, asks for story-style delivery, or provides an existing story number to work under. For ordinary ad hoc ServiceNow jobs, do not create an `rm_story`; make the requested change directly in the appropriate existing context and still verify records plus update-set capture when relevant.
+Use this flow when the user explicitly asks to create/update a story, asks for story-style delivery, or provides an existing story number as requirements context. An existing story is read-only unless the user asks for exact story field, work-note, assignment, or state changes. Never create an `rm_story` merely because a story number was provided.
 
-1. Create or identify the story first.
-   - Capture the requested behavior in `rm_story.short_description` and `description`.
-   - Set required fields such as `assigned_to` and `eap_team`.
-   - Keep the story in Draft or the user's requested starting state while development is in progress.
+1. Identify and read the story first; create one only when explicitly requested.
+   - Capture number, short description, description, acceptance criteria, assignment/team, state, and links without changing them.
+   - If creation or a field update was requested, change only the named fields and preserve the agreed starting state while development is in progress.
 2. Identify the affected application scope before creating update sets.
    - Resolve the original artifact by stable keys, then read `sys_scope` and `sys_package`.
    - For clones, create the clone in the same scope/package as the original unless the user explicitly wants a different scope.
@@ -81,11 +80,9 @@ Use this flow only when the user explicitly asks for a story, asks for story-sty
    - Record-level checks should verify scope, package, active/current state, and key script/template contents.
    - Behavior-level checks should exercise the relevant endpoint, server-side API, or portal response where possible.
    - Also verify the baseline/original artifact is unchanged when cloning was required.
-8. Document the test result on the story.
-   - Add concise work notes that mention the artifact changed, update set capture, and the important test evidence.
-9. Move the story to the agreed test state only after checks pass.
-   - In this PDI, `Ready for testing` is `rm_story.state=-7`.
-   - Do not set the story to a test-ready state while update capture or functional verification is still unresolved.
+8. If the user explicitly requested story documentation, add one concise work note with the changed artifact, update-set capture, and important test evidence.
+9. If the user explicitly requested a state transition, resolve the intended state and process rules live and move it only after checks pass. Never copy a numeric state value from another instance or process.
+   - Do not set the story to a test-ready state while update capture or functional verification is unresolved.
 
 ## Environment Variables
 
@@ -103,7 +100,7 @@ Use this flow only when the user explicitly asks for a story, asks for story-sty
 - Keep snippets small and self-contained. Xplore can accept larger POST bodies than the old background helper, but the skill should still use it for verification, not large script deployment.
 - Keep snippets self-contained with an IIFE. Avoid relying on ambient variables such as `current`.
 - Constrain all queries with explicit conditions and `setLimit()` unless using an aggregate count.
-- For verification output, print one small JSON object between `CODEX_RESULT_START` and `CODEX_RESULT_END`.
+- For verification output, print one small JSON object between `SN_RESULT_START` and `SN_RESULT_END`.
 - Pass `-Scope <sys_scope.scope>` or `-ScopeSysId <sys_scope.sys_id>` when the Xplore script must execute in a specific application scope. Resolve the scope through the Table API first.
 - If scoped execution returns an authorization/scope error, retry the check globally only when the logic does not require scoped execution. Some scoped app contexts can block script execution even for admin.
 - Do not use Xplore/background scripts for bulk updates, deletes, or data repair unless the user explicitly asks for that operation and the script has been narrowed and explained.
@@ -120,7 +117,7 @@ $script = @'
     result.sys_id = grWidget.getUniqueValue();
     result.name = grWidget.getValue('name');
   }
-  gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+  gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
 })();
 '@
 
@@ -222,7 +219,7 @@ sys_id=<batch_sys_id>^ORparent=<batch_sys_id>
 ```javascript
 (function () {
   gs.cacheFlush();
-  gs.print('CODEX_RESULT_START' + JSON.stringify({flushed:true}) + 'CODEX_RESULT_END');
+  gs.print('SN_RESULT_START' + JSON.stringify({flushed:true}) + 'SN_RESULT_END');
 })();
 ```
 
@@ -238,11 +235,15 @@ Source: ServiceNow Docs, "Defining portal styles": https://www.servicenow.com/do
 
 ## Business Rules
 
+- Inspect existing Business Rules, Flows, Data Policies, and other trigger owners on the table, including order and timing, before adding another rule.
+- Create a new rule inactive when possible. Verify scope, table, timing, order, condition, script, and update capture before controlled activation.
 - Keep advanced Business Rule code inside the generated function wrapper.
 - Avoid shared global variable names such as `gr`; use specific names like `grIncident`.
-- Do not call `current.update()` from a Business Rule unless there is a very deliberate reason. Before rules save current changes automatically; `current.update()` can recursively trigger rules.
+- In a `before` rule, set fields on `current` directly with precise conditions/changed-field guards; never call `current.update()`. Other timings also require explicit recursion analysis before any record update.
 - Keep Business Rules small and specific. Prefer Script Includes for reusable logic.
 - Always use a condition when practical, and query narrowly inside the rule.
+- Do not perform a per-transaction name lookup merely to obtain a reference sys_id. Prefer a deployable reference configuration/property or a supported, uniquely keyed and appropriately cached resolver; never embed an instance sys_id in script.
+- Test matching insert/update, nonmatching behavior, idempotence, rule-order interaction, end-user security, performance, and downstream side effects.
 
 Sources:
 - ServiceNow Business Rules Technical Best Practices: https://developer.servicenow.com/dev.do?_escaped_fragment_=%2Fguides%2Fxanadu%2Fnow-platform%2Ftpb-guide%2Fbusiness_rules_technical_best_practices

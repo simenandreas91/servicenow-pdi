@@ -33,7 +33,7 @@ Load this file when creating, reviewing, or testing integrations from ServiceNow
   - Script Include: `global.CodexPublicApiPractice`, sys_id `429afdefc3608bd06b68770d050131a5`.
   - Methods: `get jsonplaceholder user`, `post httpbin anything`, `get reqres user requires key`.
   - Test evidence: JSONPlaceholder GET returned `200`, httpbin POST returned `200`, and ReqRes without `x-api-key` returned `401` with `missing_api_key`.
-- On the Vår Energi `other` DEV profile, Table API works and Xplore has been available in recent HRSD work. Prefer Table API for narrow record reads/writes and Xplore for compact read-only verification or constrained behavior checks; verify access if an instance endpoint changes.
+- On the remote Vår Energi DEV profile `varenergi_dev`, use MCP for narrow reads/writes and a separately verified local helper profile only for genuine gaps such as compact server-side verification. Never reuse a DEV profile with a host override for another environment.
 
 ## Choosing the Pattern
 
@@ -314,7 +314,7 @@ $script = @'
   } catch (ex) {
     result = { ok: false, error: String(ex) };
   }
-  gs.print('CODEX_RESULT_START' + JSON.stringify(result) + 'CODEX_RESULT_END');
+  gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
 })();
 '@
 

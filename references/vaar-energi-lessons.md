@@ -2,18 +2,17 @@
 
 Created: 2026-05-19
 
-Use this file before starting Vår Energi stories. It captures practical instance, update-set, and implementation lessons from live work with Simen.
+Use this instance-specific file only after the core skill. It captures dated Vår Energi observations; verify every material assumption live before acting.
 
 ## Instance Workflow
 
-- Vår Energi stories are usually reviewed in PROD (`https://varenergiprod.service-now.com`) and implemented first in DEV (`https://varenergidev.service-now.com`, profile `other`).
-- PROD access has been verified with the same credentials as profile `other` by passing `-Instance 'https://varenergiprod.service-now.com'` to the helpers. Use PROD read-only unless Simen explicitly requests a production change.
-- For assigned story review in PROD, query `rm_story` assigned to `simen.knudsen@varenergi.no`. PROD user sys_id seen on 2026-05-19: `8ea85e6b29544f50ac341b4947cfc297`.
-- Use the ASCII login form `simen.knudsen@varenergi.no` for the `other` profile unless a live credential source says otherwise. A typed `vårenergi.no` username did not authenticate through the helper path on 2026-05-22.
+- Vår Energi stories are usually reviewed in PROD and implemented first in DEV. Discover profiles live; the current remote DEV key is `varenergi_dev` for `https://varenergidev.service-now.com`.
+- PROD and sandbox require their own named profiles, credentials, safety gates, and health checks. Never repoint DEV credentials with an instance override. Treat PROD as read-only unless Simen authorizes the exact write.
+- For assigned story review in a separately configured PROD profile, resolve the assignee by stable username/email and then query `rm_story`. Treat dated user sys_ids in this file as hints only.
 - Do not create `rm_story` records unless Simen explicitly asks. Treat PROD stories as source requirements and DEV update sets as the working delivery vehicle.
 - Re-read the PROD story immediately before continuing prior DEV work. Stories can change after an update set already exists; inspect the current DEV update set summary and target artifacts before deciding whether to revise, add, or leave prior captured rows.
 - When editing Vår Energi story fields, keep `description` as plain text with normal line breaks. Do not put HTML tags in `description`. HTML/list formatting is acceptable in `acceptance_criteria`, which is a rich-text field in the story form.
-- In Vår Energi instances, never mention Codex, AI, assistant, agent, bot, automation, or similar tool involvement in work notes, comments, test traces, record names, update-set descriptions, syslog markers, or other instance-visible text. Write story/test notes as Simen unless he supplies different wording.
+- In Vår Energi instances, never attribute work to Codex, AI, an assistant, or tooling in work notes, comments, test traces, record names, update-set descriptions, syslog markers, or other instance-visible text. Use the requested professional author voice without impersonation claims.
 - For Vår Energi `rm_story` updates, always use `work_notes` for implementation notes, decisions, validation evidence, and status updates. Do not use `comments` / Additional comments for story notes unless Simen explicitly asks for a public/customer-visible additional comment.
 - Production story work notes are permitted only when Simen explicitly asks for that exact update. Keep them factual, write as Simen, summarize implementation and test evidence, and never include secrets, generated tokens, client secrets, or tooling details.
 - When asked to add implementation "decisions" to a Vår Energi story and no dedicated decision field is confirmed, add a structured work note headed as decisions/update rather than changing requirement fields.
@@ -22,19 +21,17 @@ Use this file before starting Vår Energi stories. It captures practical instanc
 
 ## DEV Context
 
-- DEV profile is `other`; instance URL is `https://varenergidev.service-now.com`.
+- Remote MCP DEV profile is `varenergi_dev`; verify that it resolves to `https://varenergidev.service-now.com`. A local helper profile is separate configuration and must prove the same URL before use.
 - In Vår Energi DEV Manager Hub, the classic Administration modules are backed by Manager Hub scope (`sn_mh`) tables; inspect related-list M2M tables as well as the top-level config tables. `sn_mh_team_data_m2m_column` maps Team Data records into Team Column Configuration, `sn_mh_team_data_m2m_filter_group` maps Team Data records into Team Filter Configuration, and `sn_mh_team_m2m_filter_sources` maps Team Filter Group Data into Team Daily Stats using field `daily_stats`.
 - In Vår Energi DEV Manager Hub, the Manager Library page is `sp_page.id=sn_mh_manager_resources` and already uses a mix of Content Publishing widgets (`Styled Content (CD)`, `Information Links (CD)`, `Upcoming Events (CD)`) plus a standard Employee Center `Quick Links` instance for "Other resources"; route manager-library content/link stories to page composition plus CD/quick-link configuration before considering custom widgets.
-- Vår Energi sandbox can be reached with profile `other` by passing `-Instance 'https://varenergisandbox.service-now.com'`. Table API worked on 2026-05-27, and Xplore became available after installing Xplore: Developer Toolkit 5.02.
-- Re-check sandbox authentication before starting Compendia follow-up work. On 2026-06-18 the same `other` profile still authenticated to DEV and PROD, but sandbox returned HTTP 401 for both Table API and Xplore. The local `.env` had only `SN_OTHER_*` and `SN_PDI_*` profiles, so sandbox likely needs its own `SN_SANDBOX_*` credential/profile or a refreshed local-password credential. A direct `login.do` local-login attempt with a provided sandbox credential also returned "User name or password invalid"; do not assume sandbox still shares DEV/PROD credentials.
-- On 2026-06-23, PROD still authenticated with profile `other` plus `-Instance 'https://varenergiprod.service-now.com'`, returning current API user `simen.knudsen@varenergi.no`; sandbox still returned HTTP 401 "User is not authenticated" for the same profile and `-Instance 'https://varenergisandbox.service-now.com'`. A sandbox `login.do` local-form submit with the current local credential no longer showed the invalid-password message and returned a navigation/intermediate page, but the resulting web session still received 401 on `/api/now/table/sys_user`; Basic auth also returned 401.
+- Historical tests used host overrides for sandbox/PROD. Do not repeat that pattern; configure a dedicated named profile for each environment and verify it before any read.
+- Re-check sandbox authentication before follow-up work. A UI session does not prove REST access, and DEV/PROD credentials must not be assumed valid for sandbox.
 - A sandbox UI session from `login.do` does not automatically prove REST access. On 2026-06-18, the user reached `/now/nav/ui/home` in the in-app browser, but a same-browser direct `/api/now/table/sys_user?...` URL still returned "User is not authenticated"; this was reconfirmed on 2026-06-23 after interactive login to `/now/nav/ui/home`. Plan sandbox implementation around UI-only access until a working local/API credential or OAuth client is available.
 - Sandbox Basic auth is blocked by the maintained `SNCRestrictBasicAuthUserAuthenticationGate` when `glide.authenticate.basic_auth.restriction.enforce=true`; DEV had the same feature active but `enforce=false` on 2026-06-23. The sandbox failure log says the interactive user must provide MFA OTP, have explicit `snc_basic_auth_api_access`, be WSAO, or be otherwise allow-listed. Admin wildcard role checks are not enough for this gate because it checks `GlideUser.getRoles().contains(...)`.
-- After `snc_basic_auth_api_access` was granted to `simen.knudsen@varenergi.no` in sandbox on 2026-06-23, Basic auth, Table API helpers, and Xplore all authenticated successfully against `https://varenergisandbox.service-now.com` with profile `other` plus the sandbox `-Instance` override.
+- A dated sandbox test succeeded after `snc_basic_auth_api_access` was granted. Re-verify through a dedicated sandbox profile; do not reuse a DEV profile with a host override.
 - Xplore is available in DEV after Xplore: Developer Toolkit 5.02 was installed. Prefer Xplore for compact read-only verification and constrained behavior checks.
 - For Vår General Inquiry catalog client scripts, the record producer is `General Inquiry` (`sc_cat_item_producer=27c78de49f331200d9011977677fcfb3`) in Employee Center Core, and the Category select variable is `what_is_the_inquiry_about` (`item_option_new=638da54421418f10d8cb70a2b1956aa7`, client-script `cat_variable=IO:638da54421418f10d8cb70a2b1956aa7`). In DEV on 2026-06-26, Table API create/PATCH ignored `catalog_script_client.cat_variable`; a constrained GlideRecord update set the binding and captured it correctly.
-- Current DEV API/Xplore user sys_id seen on 2026-05-19: `38c17f3fcc980310b214a0b7a2acbbef` (`simen.knudsen@varenergi.no`).
-- The default user sys_id in `Set-ServiceNowUpdateSetContext.ps1` is not correct for Vår Energi DEV. Pass `-UserSysId '38c17f3fcc980310b214a0b7a2acbbef'`.
+- Resolve the current DEV integration user by stable `user_name` and pass its live sys_id to `Set-ServiceNowUpdateSetContext.ps1`; never copy a dated user sys_id across profiles.
 - Restore developer preferences after each implementation and remove local `.sn-pref-snapshot-*` files created for the story.
 - If HR Core portal submit reports `Access to api 'setWorkflow'` and the refusal names table scope `Enterprise Service Management Integrations Framework`, a cross-scope privilege is not sufficient because the API policy requires the caller scope to match the table scope. In DEV on 2026-05-29 the practical fix was to patch HR Core `hr_Utils.updateUserMismatchField()` so it only calls `setWorkflow(false)` when the target table is in `sn_hr_core`; the General Inquiry producer then submitted successfully while `sn_hr_core_job` remained owned by `sn_hr_integr_fw`.
 - In Xplore/GlideRecord probes on Vår Energi DEV, boolean fields may return `1`/`0` from `getValue()` even when Table API displays `true`/`false`; normalize both forms before deciding whether HR Services or record producers are active.
@@ -45,7 +42,7 @@ Use this file before starting Vår Energi stories. It captures practical instanc
 - If the user names an existing story update set or asks to continue prior work, query `sys_update_set` by story prefix first and switch to that exact record with `Set-ServiceNowUpdateSetContext.ps1 -UpdateSetSysId <sys_id>`. Do not create a replacement update set just because the requirement changed.
 - Confirm update capture with `Get-ServiceNowUpdateSetSummary.ps1`.
 - If update XML rows appear under `global`, inspect payload scope/package before doing anything else; earlier Document Templates work captured payloads with correct scoped app metadata even when update-row metadata needed cleanup.
-- For HR Core story work, use scope/application `Human Resources: Core` (`sn_hr_core`, sys_id `d4ac3fff5b311200a4656ede91f91af2`).
+- For HR Core story work, resolve scope/application `Human Resources: Core` (`sn_hr_core`) live in the target profile; do not rely on a stored scope sys_id.
 - For Document Templates story work, use scope/application `Document Templates` (`sn_doc`). Resolve the app sys_id in the target instance before switching scopes.
 - Re-parenting completed Vaar Energi DEV update sets by PATCHing `sys_update_set.parent` also refreshes `base_update_set`; keep older batch records separate rather than nesting one batch update set under another unless explicitly requested.
 
@@ -55,7 +52,7 @@ When Simen asks to "batch up" update sets, create or reuse a story batch update 
 
 Use this runbook:
 
-1. Load this file and confirm the target instance/profile. For Vår Energi DEV, use `-Profile other -EnvPath 'C:\Users\simen\Documents\Codex\ServiceNow\.env'`.
+1. Load this file and confirm the target instance/profile. For remote MCP work use `varenergi_dev`; for a local helper use only a separately configured profile that health-checks to the exact DEV URL.
 2. Query `sys_update_set` by story prefix, e.g. `nameLIKESTRY0010045`, with fields `sys_id,name,application,state,parent,base_update_set,sys_created_on`.
 3. Identify whether a batch already exists. Prefer an exact batch name of `<story> - Batch`, for example `STRY0010045 - Batch`.
 4. If no batch exists, create it as a Global update set named `<story> - Batch`. If Table API creation follows the user's current application preference instead of Global, snapshot preferences, switch to Global with `Set-ServiceNowUpdateSetContext.ps1`, then correct the batch application. If PATCH cannot change `application`, use a constrained Xplore script in Global to set `sys_update_set.application='global'`, then read back to verify.
@@ -75,18 +72,18 @@ Core commands:
 & scripts/Invoke-ServiceNowTable.ps1 -Table sys_update_set `
   -Query 'nameLIKESTRY0010045' `
   -Fields 'sys_id,name,application,state,parent,base_update_set,sys_created_on' `
-  -DisplayValue all -Profile other -EnvPath '<workspace>\.env' -ExcludeReferenceLink
+  -DisplayValue all -Profile '<verified-dev-profile>' -EnvPath '<workspace>\.env' -ExcludeReferenceLink
 
 & scripts/Invoke-ServiceNowTable.ps1 -Method POST -Table sys_update_set `
   -BodyJson '{"name":"STRY0010045 - Batch","application":"global","state":"in progress"}' `
   -Fields 'sys_id,name,application,state,parent,base_update_set' `
-  -DisplayValue all -Profile other -EnvPath '<workspace>\.env' -ExcludeReferenceLink
+  -DisplayValue all -Profile '<verified-dev-profile>' -EnvPath '<workspace>\.env' -ExcludeReferenceLink
 
 & scripts/Invoke-ServiceNowTable.ps1 -Method PATCH -Table sys_update_set `
   -SysId '<child_update_set_sys_id>' `
   -BodyJson '{"parent":"<batch_update_set_sys_id>"}' `
   -Fields 'sys_id,name,parent,base_update_set,application,state' `
-  -DisplayValue all -Profile other -EnvPath '<workspace>\.env' -ExcludeReferenceLink
+  -DisplayValue all -Profile '<verified-dev-profile>' -EnvPath '<workspace>\.env' -ExcludeReferenceLink
 ```
 
 If the batch application must be corrected and Table API PATCH does not take effect, use Xplore narrowly:
@@ -215,7 +212,7 @@ Step-by-step:
 - The Compendia sync loop should scan the full page list but only count new/changed pages toward `varenergi.compendia.sync.max_per_run`; otherwise each daily run repeats the first N pages. In sandbox, `VECompendiaKnowledgeSync.syncAll(limit, true)` dry-run mode verified this behavior without creating articles.
 - The Compendia page API response did not expose author, created-by, or updated-by metadata on 2026-05-27; available page fields were ID, title, content, URL, created/modified dates, tags, and blocks. Original-author attribution in ServiceNow requires Compendia to expose author data or a separate page-author endpoint.
 - Auto-publish is controlled by `varenergi.compendia.sync.auto_publish` and defaults to false. When true, the sync sets `workflow_state=published` and a published date; when false, it keeps articles draft and clears the published date on sync updates.
-- In sandbox, synced article authors are controlled by `varenergi.compendia.author_user`, which points to a dedicated `Compendia` user with `knowledge_admin`. If this pattern is migrated by update set, force-capture both the `sys_user` row and the direct `sys_user_has_role` row because they are data records and may not capture naturally.
+- In sandbox, synced article authors are controlled by `varenergi.compendia.author_user`, which points to a dedicated `Compendia` user with `knowledge_admin`. Treat the user and role assignment as data/security provisioning, not ordinary update-set configuration; transport them through the approved identity/data mechanism and re-resolve the property reference in each target.
 - The Compendia API can return HTTP 429 during full sync if every page detail request fetches a fresh OAuth token and runs without pacing. Cache the OAuth token per `VECompendiaKnowledgeSync` instance, use a small request delay/retry loop, and log per-page errors so one rate-limited page does not hide the failure point or stop diagnostic output.
 - Compendia page content can mix absolute image URLs with root-relative media URLs such as `/uploads/images/...`. Normalize relative `src` and `href` values to `https://cp.compendia.no/...` before storing `kb_knowledge.text`; otherwise ServiceNow resolves them against the instance URL and renders broken images.
 - The 2026-06-18 Compendia expansion syncs four handbook slugs (`employee`, `leadership-portal`, `personal`, `personal-offshore`) from property `varenergi.compendia.handbooks`. Use a handbook-aware external key such as `employee:1280949` in the existing source ID field so translated/overlapping articles can coexist. The staging table `u_compendia_import_staging` extends Import Set Row and stores payload, handbook, tags, processing state, target article, and errors. Compendia collapsible markers arrive as `div.collapsable` with `data-collapse-title`; transform those into styled heading blocks before storing KB HTML.
@@ -255,7 +252,7 @@ Step-by-step:
 
 - In Vår Energi DEV on 2026-05-29, `sn_hr_core_job` is owned by `Enterprise Service Management Integrations Framework` (`sn_hr_integr_fw`), not HR Core, even though the table name starts with `sn_hr_core`. HR Core code that calls `setWorkflow(false)` on `sn_hr_core_job` violates the Zurich scoped GlideRecord same-scope restriction.
 - A `sys_scope_privilege` for `GlideRecord.setWorkflow` or `SetWorkflow` does not override this platform restriction. The durable fix is to remove or guard the same-scope-only call at the active HR Core code path.
-- To isolate the live portal path, instrument active HR Core artifacts that contain direct `*.setWorkflow(false)` with a short `gs.warn('[CODEX_SETWORKFLOW_TRACE] ... stack=' + new Error().stack)` marker, then reproduce through the portal and query `syslog` for the marker excluding `source=SND Xplore`.
+- When explicitly authorized to isolate the live portal path, add short-lived, narrowly targeted logging to the controlling customer-owned artifact, use a neutral correlation marker such as `SN_SETWORKFLOW_TRACE`, reproduce once, query `syslog`, and remove the logging immediately. Do not instrument protected or ServiceNow-owned artifacts.
 - Employee Center portal banners can outlive the server transaction that created them. If a reproduced HR case creates no fresh `syslog` row, no trace marker, and no `sys_restricted_caller_access` row, first dismiss the red banner in the browser and retest before adding more privileges. The General Inquiry record producer is owned by Employee Center Core, so do not patch it while the current update set is HR Core.
 - For General Inquiry portal submissions, also check `sys_flow_context` at the record producer submit timestamp. On 2026-05-29 the active ESM Integrations Framework flows/subflows existed but did not drive the submit path; the live failing context was HR Core subflow `HR service activities` (`2429451beba84210c9680878f152284e`) launched by HR Core BR `Apply Service Template Flow` (`b8d1d117ebe84210c9680878f15228a7`) on `sn_hr_core_case`. That subflow errored while updating `service_activities_triggered=true` on `in.hr_case` with `The requested flow operation was prohibited by security rules`.
 - On 2026-05-30, the temporary UI-noise workaround for General Inquiry was an Employee Center Core update set (`General Inquiry portal message suppression`, `ff1952ef084dc350b214e39a21c8b465`) that adds `new global.VEMessageUtil().clearPortalMessages()` after `hr_ServicesUtil.createCaseFromProducer(...)` in record producer `27c78de49f331200d9011977677fcfb3`. The helper must remain Global because `gs.flushMessages()` is blocked from scoped portal code such as `sn_hr_sp`.

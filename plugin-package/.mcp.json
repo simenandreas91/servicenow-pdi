@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "servicenow-pdi": {
+      "type": "http",
+      "url": "https://servicenow-pdi.netlify.app/mcp",
+      "oauth_resource": "https://servicenow-pdi.netlify.app/mcp"
+    }
+  }
+}
