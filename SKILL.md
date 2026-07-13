@@ -30,6 +30,12 @@ Never attribute work to Codex, AI, an assistant, or tooling in instance-visible 
 
 ## Instance And Tool Policy
 
+### FFI Client Alias
+
+In this user's work, interpret `FFI` and `Forsvarets forskningsinstitutt` as the configured `pdi` profile unless the user explicitly says otherwise. The PDI is a mimic or near-clone used for FFI-related development; it is not the real FFI instance.
+
+The real FFI environment is an on-premises ServiceNow deployment on a secure, isolated network and is not reachable through this MCP server or similar external tooling. Never attempt to connect to it. Treat PDI inspection and testing as proxy evidence only: do not claim exact parity or validation in the real FFI environment, and identify any final verification or deployment that must be performed manually inside FFI.
+
 For any task that touches a connected instance:
 
 1. Call `servicenow_list_profiles` once.
