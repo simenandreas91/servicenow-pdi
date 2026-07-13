@@ -217,6 +217,34 @@ test("writes are gated and secret-like fields are blocked", async () => {
   delete process.env.SN_WRITE_TABLES;
 });
 
+test("temporary preference cleanup uses the write gate without broad delete access", async () => {
+  let method: string | undefined;
+  process.env.SN_WRITE_TABLES = "sys_user_preference";
+
+  try {
+    const client = new ServiceNowClient({
+      instance: "https://dev000000.service-now.com",
+      username: "admin",
+      password: "pw",
+      writeEnabled: true,
+      deleteEnabled: false,
+      fetchImpl: async (_input, init) => {
+        method = init?.method;
+        return new Response(null, { status: 204 });
+      },
+    });
+
+    const result = await client.removeTemporaryUserPreference(
+      "a".repeat(32),
+    );
+
+    assert.equal(method, "DELETE");
+    assert.equal(result.removed, true);
+  } finally {
+    delete process.env.SN_WRITE_TABLES;
+  }
+});
+
 test("credential tables and nested response secrets are blocked or redacted", async () => {
   const client = new ServiceNowClient({
     instance: "https://dev000000.service-now.com",

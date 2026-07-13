@@ -1,6 +1,13 @@
 import type { KeyValueStore } from "./oauth.js";
 import { validateBearer } from "./oauth.js";
 import {
+  confirmUpdateCapture,
+  getDevelopmentContext,
+  parseDevelopmentContextSnapshot,
+  restoreDevelopmentContext,
+  setUpdateSetContext,
+} from "./development-context.js";
+import {
   listServiceNowProfiles,
   ServiceNowClient,
   ServiceNowError,
@@ -109,6 +116,75 @@ const TOOLS: ToolDefinition[] = [
     },
     true,
     ["profile", "table"],
+  ),
+
+  tool(
+    "servicenow_get_development_context",
+    "Get ServiceNow development context",
+    "Read the authenticated user's current application and update-set preferences, optionally including the scoped preference for one technical application scope.",
+    {
+      profile: profileProperty(),
+      scope: scopeProperty(false),
+    },
+    true,
+    ["profile"],
+  ),
+
+  tool(
+    "servicenow_set_update_set_context",
+    "Set ServiceNow update-set context",
+    "Atomically snapshot and set the authenticated user's application and scoped update-set preferences. Sets apps.current_app before creating a scoped update set, verifies the actual application and state, and restores the snapshot automatically if setup fails. Provide either update_set_sys_id or name, then retain the returned snapshot for servicenow_restore_development_context.",
+    {
+      profile: profileProperty(),
+      scope: scopeProperty(),
+      update_set_sys_id: sysIdProperty(
+        "Existing in-progress update set sys_id; mutually exclusive with name",
+        false,
+      ),
+      name: str(
+        "New update-set name when update_set_sys_id is omitted",
+        false,
+      ),
+      description: str(
+        "Optional description for a newly created update set",
+        false,
+      ),
+    },
+    false,
+    ["profile", "scope"],
+  ),
+
+  tool(
+    "servicenow_restore_development_context",
+    "Restore ServiceNow development context",
+    "Restore application and update-set preferences from the exact snapshot returned by servicenow_set_update_set_context. The snapshot is bound to the selected profile, instance, and authenticated user; temporary scoped preferences created during setup are removed.",
+    {
+      profile: profileProperty(),
+      snapshot: obj(
+        "Snapshot returned by servicenow_set_update_set_context",
+      ),
+    },
+    false,
+    ["profile", "snapshot"],
+  ),
+
+  tool(
+    "servicenow_confirm_update_capture",
+    "Confirm ServiceNow update capture",
+    "Verify customer updates captured in one update set, including expected target names and application scope. Returns missing names and mixed-scope rows without modifying the instance.",
+    {
+      profile: profileProperty(),
+      update_set_sys_id: sysIdProperty(
+        "Update set sys_id to inspect",
+      ),
+      expected_application: scopeProperty(false),
+      names: arr(
+        "Optional sys_update_xml names expected in the update set",
+        false,
+      ),
+    },
+    true,
+    ["profile", "update_set_sys_id"],
   ),
 
   tool(
@@ -452,6 +528,68 @@ async function callTool(
       );
     }
 
+    case "servicenow_get_development_context":
+      return getDevelopmentContext(
+        client,
+        optionalScopeArg(args, "scope"),
+      );
+
+    case "servicenow_set_update_set_context": {
+      const updateSetSysId = optionalSysIdArg(
+        args,
+        "update_set_sys_id",
+      );
+      const name = optionalString(args, "name");
+      const description = optionalString(
+        args,
+        "description",
+      );
+
+      if (Boolean(updateSetSysId) === Boolean(name)) {
+        throw new ServiceNowError(
+          "Provide exactly one of update_set_sys_id or name",
+          400,
+        );
+      }
+
+      const scope = scopeArg(args, "scope");
+
+      return setUpdateSetContext(
+        client,
+        updateSetSysId
+          ? {
+              scope,
+              updateSetSysId,
+              ...(description !== undefined
+                ? { description }
+                : {}),
+            }
+          : {
+              scope,
+              name: name!,
+              ...(description !== undefined
+                ? { description }
+                : {}),
+            },
+      );
+    }
+
+    case "servicenow_restore_development_context":
+      return restoreDevelopmentContext(
+        client,
+        parseDevelopmentContextSnapshot(
+          objectArg(args, "snapshot"),
+        ),
+      );
+
+    case "servicenow_confirm_update_capture":
+      return confirmUpdateCapture(
+        client,
+        sysIdArg(args, "update_set_sys_id"),
+        optionalScopeArg(args, "expected_application"),
+        stringArrayArg(args, "names"),
+      );
+
     case "servicenow_create_record":
       return client.create(
         stringArg(args, "table"),
@@ -521,7 +659,9 @@ function tool(
         name.includes("list") ||
         name.includes("query") ||
         name.includes("shape") ||
-        name.includes("health"),
+        name.includes("health") ||
+        name.includes("confirm") ||
+        name.includes("restore"),
       openWorldHint: true,
     },
     securitySchemes: security,
@@ -537,6 +677,29 @@ function profileProperty(): JsonObject {
     description:
       "Profile key returned by servicenow_list_profiles; required on every instance-bound call.",
     pattern: "^[a-z][a-z0-9_]{0,31}$",
+  };
+}
+
+function scopeProperty(required = true): JsonObject {
+  return {
+    type: "string",
+    description:
+      "Technical scope name such as sn_mh, global, or a 32-character sys_scope sys_id.",
+    pattern:
+      "^(global|[a-z][a-z0-9_]{0,79}|[0-9a-fA-F]{32})$",
+    ...(required ? { minLength: 1 } : {}),
+  };
+}
+
+function sysIdProperty(
+  description: string,
+  required = true,
+): JsonObject {
+  return {
+    type: "string",
+    description,
+    pattern: "^[0-9a-fA-F]{32}$",
+    ...(required ? { minLength: 32 } : {}),
   };
 }
 
@@ -669,6 +832,60 @@ function profileArg(
     "profile must be a configured lowercase profile key",
     400,
   );
+}
+
+function scopeArg(
+  args: JsonObject,
+  key: string,
+): string {
+  const value = stringArg(args, key).trim().toLowerCase();
+
+  if (
+    value === "global" ||
+    /^[a-z][a-z0-9_]{0,79}$/.test(value) ||
+    /^[0-9a-f]{32}$/.test(value)
+  ) {
+    return value;
+  }
+
+  throw new ServiceNowError(
+    `${key} must be global, a technical scope name, or a 32-character sys_id`,
+    400,
+  );
+}
+
+function optionalScopeArg(
+  args: JsonObject,
+  key: string,
+): string | undefined {
+  return args[key] === undefined
+    ? undefined
+    : scopeArg(args, key);
+}
+
+function sysIdArg(
+  args: JsonObject,
+  key: string,
+): string {
+  const value = stringArg(args, key);
+
+  if (/^[0-9a-f]{32}$/i.test(value)) {
+    return value;
+  }
+
+  throw new ServiceNowError(
+    `${key} must be 32 hexadecimal characters`,
+    400,
+  );
+}
+
+function optionalSysIdArg(
+  args: JsonObject,
+  key: string,
+): string | undefined {
+  return args[key] === undefined
+    ? undefined
+    : sysIdArg(args, key);
 }
 
 function numberArg(

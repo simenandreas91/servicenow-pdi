@@ -501,6 +501,35 @@ export class ServiceNowClient {
     };
   }
 
+  async removeTemporaryUserPreference(
+    sysId: string,
+  ): Promise<JsonObject> {
+    this.validateSysId(sysId);
+
+    if (!this.writeEnabled) {
+      throw new ServiceNowError(
+        "ServiceNow writes are disabled",
+        403,
+      );
+    }
+
+    this.validateTablePermission(
+      "sys_user_preference",
+      "write",
+    );
+
+    await this.request(
+      `/api/now/table/sys_user_preference/${sysId}`,
+      { method: "DELETE" },
+    );
+
+    return {
+      removed: true,
+      table: "sys_user_preference",
+      sys_id: sysId,
+    };
+  }
+
   async tableShape(
     table: string,
     input: TableShapeOptions = {},

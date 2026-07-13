@@ -28,6 +28,17 @@ test("initialize and tools/list are available before OAuth", async () => {
         tool.annotations.destructiveHint === true,
     ),
   );
+  assert.deepEqual(
+    [
+      "servicenow_get_development_context",
+      "servicenow_set_update_set_context",
+      "servicenow_restore_development_context",
+      "servicenow_confirm_update_capture",
+    ].filter(name =>
+      !TOOLS.some(tool => tool.name === name)
+    ),
+    [],
+  );
   assert.ok(
     TOOLS.every((tool) =>
       tool.name === "servicenow_list_profiles" ||
