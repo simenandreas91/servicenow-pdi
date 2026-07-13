@@ -1,9 +1,11 @@
 import type { KeyValueStore } from "./oauth.js";
 import { validateBearer } from "./oauth.js";
 import {
+  listServiceNowProfiles,
   ServiceNowClient,
   ServiceNowError,
   type JsonObject,
+  type ServiceNowProfileSummary,
 } from "./servicenow.js";
 
 interface RpcRequest {
@@ -15,6 +17,8 @@ interface RpcRequest {
 
 interface McpDependencies {
   client?: ServiceNowClient;
+  clientFactory?: (profile?: string) => ServiceNowClient;
+  profileLister?: () => ServiceNowProfileSummary[];
   authStore?: KeyValueStore;
 }
 
@@ -38,10 +42,20 @@ const WRITE_SECURITY = [
 
 const TOOLS: ToolDefinition[] = [
   tool(
+    "servicenow_list_profiles",
+    "List ServiceNow profiles",
+    "List configured ServiceNow instance profiles and their non-secret connection status and safety gates. Use the returned profile key explicitly on subsequent calls.",
+    {},
+    true,
+  ),
+
+  tool(
     "servicenow_health",
     "Check ServiceNow connection",
-    "Verify the configured PDI, authenticated ServiceNow user, and whether writes and deletes are enabled.",
-    {},
+    "Verify a configured ServiceNow profile, authenticated user, and whether writes and deletes are enabled.",
+    {
+      profile: profileProperty(),
+    },
     true,
   ),
 
@@ -50,6 +64,7 @@ const TOOLS: ToolDefinition[] = [
     "Query ServiceNow records",
     "Read a narrow set of records through the ServiceNow Table API. Always provide fields and a small limit when possible.",
     {
+      profile: profileProperty(),
       table: str("ServiceNow table name"),
       query: str("Encoded query", false),
       fields: arr("Explicit fields to return"),
@@ -66,6 +81,7 @@ const TOOLS: ToolDefinition[] = [
     "Get one ServiceNow record",
     "Read one record by table and sys_id.",
     {
+      profile: profileProperty(),
       table: str("ServiceNow table name"),
       sys_id: str("32-character sys_id"),
       fields: arr("Explicit fields to return"),
@@ -80,6 +96,7 @@ const TOOLS: ToolDefinition[] = [
     "Inspect ServiceNow table shape",
     "Inspect a table definition, selected direct dictionary fields, and optionally active choices before writing unfamiliar records.",
     {
+      profile: profileProperty(),
       table: str("ServiceNow table name"),
       fields: arr(
         "Optional field names to inspect; omit to return all direct fields",
@@ -98,11 +115,12 @@ const TOOLS: ToolDefinition[] = [
     "Create a ServiceNow record",
     "Create exactly one record through the Table API. Set application scope and update-set context first when creating configuration.",
     {
+      profile: profileProperty(),
       table: str("ServiceNow table name"),
       record: obj("Field/value object"),
     },
     false,
-    ["table", "record"],
+    ["profile", "table", "record"],
   ),
 
   tool(
@@ -110,12 +128,13 @@ const TOOLS: ToolDefinition[] = [
     "Update a ServiceNow record",
     "Patch exactly one record by sys_id. Read it first and send only changed fields.",
     {
+      profile: profileProperty(),
       table: str("ServiceNow table name"),
       sys_id: str("32-character sys_id"),
       record: obj("Fields to change"),
     },
     false,
-    ["table", "sys_id", "record"],
+    ["profile", "table", "sys_id", "record"],
   ),
 
   tool(
@@ -123,12 +142,13 @@ const TOOLS: ToolDefinition[] = [
     "Delete a ServiceNow record",
     "Delete exactly one record when deletes are enabled. Requires an exact confirmation string and should only be used for throwaway data or an explicitly approved deletion.",
     {
+      profile: profileProperty(),
       table: str("ServiceNow table name"),
       sys_id: str("32-character sys_id"),
-      confirmation: str("Must equal DELETE <table> <sys_id>"),
+      confirmation: str("Must equal DELETE <profile> <table> <sys_id>"),
     },
     false,
-    ["table", "sys_id", "confirmation"],
+    ["profile", "table", "sys_id", "confirmation"],
     true,
   ),
 ];
@@ -225,11 +245,11 @@ export async function handleMcp(
       },
       serverInfo: {
         name: "servicenow-pdi",
-        title: "Simen's ServiceNow PDI",
-        version: "1.0.0",
+        title: "Simen's ServiceNow instances",
+        version: "1.1.0",
       },
       instructions:
-        "Inspect before writing. Prefer supported OOTB ServiceNow configuration. Use narrow reads with explicit fields. Writes affect Simen's PDI: read the target first, set scope/update set when needed, patch one sys_id, and validate afterward. Never request or return credentials or secret fields.",
+        "List profiles first and pass the intended profile explicitly. Inspect before writing. Prefer supported OOTB ServiceNow configuration. Use narrow reads with explicit fields. Before writes, verify profile health, read the target, set scope/update set when needed, patch one sys_id, and validate afterward. Never request or return credentials or secret fields.",
     });
   }
 
@@ -297,16 +317,41 @@ export async function handleMcp(
     ? params.arguments
     : {};
 
-  const client = deps.client ?? new ServiceNowClient();
+  let requestedProfile: string | undefined;
   const started = Date.now();
 
   try {
-    const result = await callTool(client, name, args);
+    requestedProfile = profileArg(args);
+
+    if (
+      definition.annotations.readOnlyHint !== true &&
+      !requestedProfile
+    ) {
+      throw new ServiceNowError(
+        "profile is required for ServiceNow write tools",
+        400,
+      );
+    }
+
+    const result = name === "servicenow_list_profiles"
+      ? (deps.profileLister ?? listServiceNowProfiles)()
+      : await callTool(
+          deps.clientFactory?.(requestedProfile) ??
+            deps.client ??
+            new ServiceNowClient({
+              ...(requestedProfile
+                ? { profile: requestedProfile }
+                : {}),
+            }),
+          name,
+          args,
+        );
 
     console.log(
       JSON.stringify({
         event: "mcp_tool",
         tool: name,
+        profile: requestedProfile || "default",
         table: stringArg(args, "table", false),
         sys_id: stringArg(args, "sys_id", false),
         ok: true,
@@ -328,6 +373,7 @@ export async function handleMcp(
       JSON.stringify({
         event: "mcp_tool",
         tool: name,
+        profile: requestedProfile || "default",
         table: stringArg(args, "table", false),
         sys_id: stringArg(args, "sys_id", false),
         ok: false,
@@ -424,7 +470,7 @@ async function callTool(
 
       if (
         stringArg(args, "confirmation") !==
-        `DELETE ${table} ${sysId}`
+        `DELETE ${client.profile} ${table} ${sysId}`
       ) {
         throw new ServiceNowError(
           "Delete confirmation does not match the target",
@@ -471,6 +517,7 @@ function tool(
       destructiveHint: destructive,
       idempotentHint:
         name.includes("get") ||
+        name.includes("list") ||
         name.includes("query") ||
         name.includes("shape") ||
         name.includes("health"),
@@ -480,6 +527,15 @@ function tool(
     _meta: {
       securitySchemes: security,
     },
+  };
+}
+
+function profileProperty(): JsonObject {
+  return {
+    type: "string",
+    description:
+      "Configured ServiceNow profile key. Omit only to use SN_DEFAULT_PROFILE.",
+    pattern: "^[a-z][a-z0-9_]{0,31}$",
   };
 }
 
@@ -589,6 +645,26 @@ function optionalString(
   return typeof value === "string" && value
     ? value
     : undefined;
+}
+
+function profileArg(
+  args: JsonObject,
+): string | undefined {
+  const value = args.profile;
+
+  if (value === undefined) return undefined;
+
+  if (
+    typeof value === "string" &&
+    /^[a-z][a-z0-9_]{0,31}$/.test(value)
+  ) {
+    return value;
+  }
+
+  throw new ServiceNowError(
+    "profile must be a configured lowercase profile key",
+    400,
+  );
 }
 
 function numberArg(

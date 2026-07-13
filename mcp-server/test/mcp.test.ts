@@ -28,6 +28,15 @@ test("initialize and tools/list are available before OAuth", async () => {
         tool.annotations.destructiveHint === true,
     ),
   );
+  assert.ok(
+    TOOLS.every((tool) =>
+      tool.name === "servicenow_list_profiles" ||
+      Object.hasOwn(
+        tool.inputSchema.properties as object,
+        "profile",
+      ),
+    ),
+  );
 
   const future = await handleMcp(
     rpc("initialize", { protocolVersion: "2099-01-01" }, 9),
@@ -116,6 +125,194 @@ test("read tools accept a scoped bearer token", async () => {
   assert.equal(body.result.structuredContent.result.ok, true);
 });
 
+test("tool calls route to the explicitly selected profile", async () => {
+  const authStore = readAuthStore();
+  let selectedProfile: string | undefined;
+
+  const response = await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_health",
+        arguments: { profile: "varenergi_dev" },
+      },
+      40,
+      { Authorization: "Bearer valid" },
+    ),
+    {
+      authStore,
+      clientFactory(profile) {
+        selectedProfile = profile;
+        return {
+          health: async () => ({ profile, ok: true }),
+        } as never;
+      },
+    },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(selectedProfile, "varenergi_dev");
+
+  const body = await response.json() as {
+    result: {
+      structuredContent: {
+        result: { profile: string };
+      };
+    };
+  };
+
+  assert.equal(
+    body.result.structuredContent.result.profile,
+    "varenergi_dev",
+  );
+});
+
+test("profile listing exposes only non-secret configuration", async () => {
+  const response = await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_list_profiles",
+        arguments: {},
+      },
+      41,
+      { Authorization: "Bearer valid" },
+    ),
+    {
+      authStore: readAuthStore(),
+      profileLister: () => [
+        {
+          profile: "pdi",
+          label: "PDI",
+          default: true,
+          instance: "https://dev000000.service-now.com",
+          configured: true,
+          write_enabled: true,
+          delete_enabled: false,
+        },
+      ],
+    },
+  );
+
+  const body = await response.json() as {
+    result: {
+      structuredContent: {
+        result: Array<Record<string, unknown>>;
+      };
+    };
+  };
+
+  assert.deepEqual(
+    body.result.structuredContent.result[0],
+    {
+      profile: "pdi",
+      label: "PDI",
+      default: true,
+      instance: "https://dev000000.service-now.com",
+      configured: true,
+      write_enabled: true,
+      delete_enabled: false,
+    },
+  );
+  assert.equal(
+    "password" in body.result.structuredContent.result[0]!,
+    false,
+  );
+});
+
+test("write tools require a profile and delete confirmation binds it", async () => {
+  const missingProfile = await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_create_record",
+        arguments: {
+          table: "incident",
+          record: { short_description: "Demo" },
+        },
+      },
+      42,
+      { Authorization: "Bearer valid" },
+    ),
+    {
+      authStore: writeAuthStore(),
+      client: {
+        create: async () => ({ sys_id: "a".repeat(32) }),
+      } as never,
+    },
+  );
+  const missingBody = await missingProfile.json() as {
+    result: { isError?: boolean; content: Array<{ text: string }> };
+  };
+
+  assert.equal(missingBody.result.isError, true);
+  assert.match(
+    missingBody.result.content[0]?.text ?? "",
+    /profile is required/i,
+  );
+
+  let deleted = false;
+  const deleteClient = {
+    profile: "varenergi_dev",
+    delete: async () => {
+      deleted = true;
+      return { deleted: true };
+    },
+  } as never;
+
+  const oldConfirmation = await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_delete_record",
+        arguments: {
+          profile: "varenergi_dev",
+          table: "incident",
+          sys_id: "a".repeat(32),
+          confirmation: `DELETE incident ${"a".repeat(32)}`,
+        },
+      },
+      43,
+      { Authorization: "Bearer valid" },
+    ),
+    {
+      authStore: writeAuthStore(),
+      client: deleteClient,
+    },
+  );
+  const oldBody = await oldConfirmation.json() as {
+    result: { isError?: boolean };
+  };
+
+  assert.equal(oldBody.result.isError, true);
+  assert.equal(deleted, false);
+
+  const exactConfirmation = await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_delete_record",
+        arguments: {
+          profile: "varenergi_dev",
+          table: "incident",
+          sys_id: "a".repeat(32),
+          confirmation:
+            `DELETE varenergi_dev incident ${"a".repeat(32)}`,
+        },
+      },
+      44,
+      { Authorization: "Bearer valid" },
+    ),
+    {
+      authStore: writeAuthStore(),
+      client: deleteClient,
+    },
+  );
+
+  assert.equal(exactConfirmation.status, 200);
+  assert.equal(deleted, true);
+});
+
 test("table shape forwards field and choice filters", async () => {
   const authStore = readAuthStore();
 
@@ -175,12 +372,20 @@ test("table shape forwards field and choice filters", async () => {
 });
 
 function readAuthStore(): KeyValueStore {
+  return authStore("servicenow.read");
+}
+
+function writeAuthStore(): KeyValueStore {
+  return authStore("servicenow.read servicenow.write");
+}
+
+function authStore(scope: string): KeyValueStore {
   return {
     async get<T>() {
       return {
         kind: "access",
         clientId: "client",
-        scope: "servicenow.read",
+        scope,
         resource: "https://mcp.example.com/mcp",
         expiresAt: Date.now() + 60_000,
       } as T;

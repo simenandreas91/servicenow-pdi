@@ -74,7 +74,7 @@ Script path note: this local skill stores helpers under `scripts/`. Some Codex e
 
 ## Helper Selection
 
-- Remote ChatGPT Work: use the `servicenow_*` MCP tools; start with `servicenow_health`, then narrow reads, table shape, and single-record writes.
+- Remote MCP: call `servicenow_list_profiles`, choose the intended profile explicitly, call `servicenow_health` for it, then use the same profile for narrow reads, table shape, and single-record writes.
 - `Invoke-ServiceNowTable.ps1`: default for narrow reads, creates, patches, schema records, update sets, and setup data.
 - `Invoke-ServiceNowXploreScript.ps1`: read-only server probes, GlideRecord/GlideAggregate checks, platform API checks, and constrained behavior tests.
 - `Invoke-ServiceNowBackgroundScript.ps1`: only when Xplore is unavailable or Scripts - Background behavior must be compared.
@@ -238,7 +238,7 @@ Load only the relevant reference(s), and only when the task touches that domain:
 - Now Assist, AI Search, AI agents, MCP, AI Control Tower, providers, privacy/safety: `references/now-assist.md`
 - Australia release AI features, Build Agent, Studio AI app generation, MCP Server Console/Client: `references/australia-ai-platform.md` plus `references/now-assist.md` when runtime AI config is involved
 - External ServiceNow MCP evaluation: `references/external-mcp-evaluation.md`
-- ChatGPT Work remote PDI access and MCP operations: `references/chatgpt-work-mcp.md`
+- Remote multi-instance ServiceNow access and MCP operations: `references/chatgpt-work-mcp.md`
 - Integrations, REST messages, imports/exports, auth profiles, connection aliases: `references/integrations.md`, `references/lessons-integrations.md`
 - ACLs, hidden records, user criteria, before-query rules, Restricted Caller Access, cross-scope denied: `references/debugging.md`
 - Business Rules, Script Includes, complex scripts, story state, update-set edge cases, Xplore/background patterns: `references/development.md`

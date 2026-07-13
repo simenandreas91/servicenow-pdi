@@ -1,10 +1,94 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  listServiceNowProfiles,
   ServiceNowClient,
   ServiceNowError,
   redact,
 } from "../src/servicenow.js";
+
+test("named profiles keep credentials and safety gates separate", async () => {
+  const names = [
+    "SN_PROFILES",
+    "SN_DEFAULT_PROFILE",
+    "SN_PDI_INSTANCE",
+    "SN_PDI_USERNAME",
+    "SN_PDI_PASSWORD",
+    "SN_PDI_WRITE_ENABLED",
+    "SN_VARENERGI_DEV_LABEL",
+    "SN_VARENERGI_DEV_INSTANCE",
+    "SN_VARENERGI_DEV_USERNAME",
+    "SN_VARENERGI_DEV_PASSWORD",
+    "SN_VARENERGI_DEV_WRITE_ENABLED",
+    "SN_VARENERGI_DEV_WRITE_TABLES",
+  ];
+  const previous = new Map(
+    names.map((name) => [name, process.env[name]]),
+  );
+
+  Object.assign(process.env, {
+    SN_PROFILES: "pdi,varenergi_dev",
+    SN_DEFAULT_PROFILE: "pdi",
+    SN_PDI_INSTANCE: "https://dev000000.service-now.com",
+    SN_PDI_USERNAME: "pdi-user",
+    SN_PDI_PASSWORD: "pdi-password",
+    SN_PDI_WRITE_ENABLED: "false",
+    SN_VARENERGI_DEV_LABEL: "Var Energi DEV",
+    SN_VARENERGI_DEV_INSTANCE: "https://varenergidev.service-now.com",
+    SN_VARENERGI_DEV_USERNAME: "client-user",
+    SN_VARENERGI_DEV_PASSWORD: "client-password",
+    SN_VARENERGI_DEV_WRITE_ENABLED: "true",
+    SN_VARENERGI_DEV_WRITE_TABLES: "*",
+  });
+
+  try {
+    const profiles = listServiceNowProfiles();
+
+    assert.deepEqual(
+      profiles.map(({ profile, instance, write_enabled }) => ({
+        profile,
+        instance,
+        write_enabled,
+      })),
+      [
+        {
+          profile: "pdi",
+          instance: "https://dev000000.service-now.com",
+          write_enabled: false,
+        },
+        {
+          profile: "varenergi_dev",
+          instance: "https://varenergidev.service-now.com",
+          write_enabled: true,
+        },
+      ],
+    );
+
+    const client = new ServiceNowClient({
+      profile: "varenergi_dev",
+      fetchImpl: async () => jsonResponse({ result: {} }),
+    });
+
+    assert.equal(client.profile, "varenergi_dev");
+    assert.equal(client.profileLabel, "Var Energi DEV");
+    assert.equal(
+      client.instance.origin,
+      "https://varenergidev.service-now.com",
+    );
+
+    await client.create("sys_script", { name: "Demo" });
+
+    assert.throws(
+      () => new ServiceNowClient({ profile: "unknown" }),
+      /unknown servicenow profile/i,
+    );
+  } finally {
+    for (const [name, value] of previous) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
 
 test("query sends narrow Table API parameters and redacts secret fields", async () => {
   let requested: URL | undefined;

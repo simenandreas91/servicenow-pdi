@@ -1,8 +1,4 @@
-import {
-  env,
-  envFlag,
-  requiredEnv,
-} from "./env.js";
+import { env } from "./env.js";
 
 export type JsonObject = Record<string, unknown>;
 type FetchLike = typeof fetch;
@@ -36,12 +32,26 @@ export class ServiceNowError extends Error {
 }
 
 export interface ServiceNowOptions {
+  profile?: string;
   instance?: string;
   username?: string;
   password?: string;
   fetchImpl?: FetchLike;
   writeEnabled?: boolean;
   deleteEnabled?: boolean;
+  writeTables?: string | string[];
+  deleteTables?: string | string[];
+  additionalBlockedTables?: string | string[];
+}
+
+export interface ServiceNowProfileSummary {
+  profile: string;
+  label: string;
+  default: boolean;
+  instance: string | null;
+  configured: boolean;
+  write_enabled: boolean;
+  delete_enabled: boolean;
 }
 
 export interface TableShapeOptions {
@@ -50,6 +60,8 @@ export interface TableShapeOptions {
 }
 
 export class ServiceNowClient {
+  readonly profile: string;
+  readonly profileLabel: string;
   readonly instance: URL;
   readonly writeEnabled: boolean;
   readonly deleteEnabled: boolean;
@@ -57,14 +69,21 @@ export class ServiceNowClient {
   private readonly username: string;
   private readonly password: string;
   private readonly fetchImpl: FetchLike;
+  private readonly writeTables: Set<string>;
+  private readonly deleteTables: Set<string>;
+  private readonly additionalBlockedTables: Set<string>;
 
   constructor(options: ServiceNowOptions = {}) {
+    this.profile = resolveProfileName(options.profile);
+    this.profileLabel =
+      profileEnv(this.profile, "LABEL") ?? this.profile;
+
     this.instance = new URL(
-      options.instance ?? requiredEnv("SN_INSTANCE"),
+      options.instance ?? requiredProfileEnv(this.profile, "INSTANCE"),
     );
 
     if (this.instance.protocol !== "https:") {
-      throw new Error("SN_INSTANCE must use HTTPS");
+      throw new Error("ServiceNow instance must use HTTPS");
     }
 
     if (
@@ -73,25 +92,43 @@ export class ServiceNowClient {
       )
     ) {
       throw new Error(
-        "SN_INSTANCE must be a service-now.com host",
+        "ServiceNow instance must be a service-now.com host",
       );
     }
 
     this.username =
-      options.username ?? requiredEnv("SN_USERNAME");
+      options.username ?? requiredProfileEnv(this.profile, "USERNAME");
 
     this.password =
-      options.password ?? requiredEnv("SN_PASSWORD");
+      options.password ?? requiredProfileEnv(this.profile, "PASSWORD");
 
     this.fetchImpl = options.fetchImpl ?? fetch;
 
     this.writeEnabled =
       options.writeEnabled ??
-      envFlag("SN_WRITE_ENABLED");
+      profileEnvFlag(this.profile, "WRITE_ENABLED");
 
     this.deleteEnabled =
       options.deleteEnabled ??
-      envFlag("SN_DELETE_ENABLED");
+      profileEnvFlag(this.profile, "DELETE_ENABLED");
+
+    this.writeTables = valueSet(
+      options.writeTables ??
+        profileEnv(this.profile, "WRITE_TABLES"),
+    );
+
+    this.deleteTables = valueSet(
+      options.deleteTables ??
+        profileEnv(this.profile, "DELETE_TABLES"),
+    );
+
+    this.additionalBlockedTables = valueSet(
+      options.additionalBlockedTables ??
+        profileEnv(
+          this.profile,
+          "ADDITIONAL_BLOCKED_TABLES",
+        ),
+    );
   }
 
   private validateTable(table: string): void {
@@ -102,13 +139,9 @@ export class ServiceNowClient {
       );
     }
 
-    const additionalBlocked = csvSet(
-      env("SN_ADDITIONAL_BLOCKED_TABLES"),
-    );
-
     if (
       BLOCKED_TABLES.has(table) ||
-      additionalBlocked.has(table) ||
+      this.additionalBlockedTables.has(table) ||
       /(credential|password|user_token|certificate|private_key)/i.test(
         table,
       )
@@ -169,13 +202,10 @@ export class ServiceNowClient {
     table: string,
     kind: "write" | "delete",
   ): void {
-    const configured = csvSet(
-      env(
-        kind === "write"
-          ? "SN_WRITE_TABLES"
-          : "SN_DELETE_TABLES",
-      ),
-    );
+    const configured =
+      kind === "write"
+        ? this.writeTables
+        : this.deleteTables;
 
     if (
       !configured.has("*") &&
@@ -282,6 +312,8 @@ export class ServiceNowClient {
     });
 
     return {
+      profile: this.profile,
+      profile_label: this.profileLabel,
       instance: this.instance.origin,
       authenticated_user: users[0] ?? null,
       write_enabled: this.writeEnabled,
@@ -564,6 +596,27 @@ export class ServiceNowClient {
   }
 }
 
+export function listServiceNowProfiles(): ServiceNowProfileSummary[] {
+  const defaultProfile = defaultProfileName();
+
+  return configuredProfileNames().map((profile) => {
+    const rawInstance = profileEnv(profile, "INSTANCE");
+    const origin = instanceOrigin(rawInstance);
+    const username = profileEnv(profile, "USERNAME");
+    const password = profileEnv(profile, "PASSWORD");
+
+    return {
+      profile,
+      label: profileEnv(profile, "LABEL") ?? profile,
+      default: profile === defaultProfile,
+      instance: origin,
+      configured: Boolean(origin && username && password),
+      write_enabled: profileEnvFlag(profile, "WRITE_ENABLED"),
+      delete_enabled: profileEnvFlag(profile, "DELETE_ENABLED"),
+    };
+  });
+}
+
 function safeJson(text: string): unknown {
   try {
     return JSON.parse(text) as unknown;
@@ -659,4 +712,130 @@ function csvSet(
       .map((item) => item.trim())
       .filter(Boolean),
   );
+}
+
+const PROFILE_RE = /^[a-z][a-z0-9_]{0,31}$/;
+
+function defaultProfileName(): string {
+  return normalizeProfileName(
+    env("SN_DEFAULT_PROFILE") ?? "pdi",
+  );
+}
+
+function configuredProfileNames(): string[] {
+  const raw = env("SN_PROFILES");
+  const profiles = raw
+    ? [...new Set(
+        raw
+          .split(",")
+          .map(normalizeProfileName),
+      )]
+    : [defaultProfileName()];
+
+  if (!profiles.includes(defaultProfileName())) {
+    throw new Error(
+      "SN_DEFAULT_PROFILE must be included in SN_PROFILES",
+    );
+  }
+
+  return profiles;
+}
+
+function resolveProfileName(
+  requested: string | undefined,
+): string {
+  const profile = requested
+    ? normalizeProfileName(requested)
+    : defaultProfileName();
+
+  if (!configuredProfileNames().includes(profile)) {
+    throw new ServiceNowError(
+      `Unknown ServiceNow profile '${profile}'`,
+      400,
+    );
+  }
+
+  return profile;
+}
+
+function normalizeProfileName(value: string): string {
+  const profile = value.trim().toLowerCase();
+
+  if (!PROFILE_RE.test(profile)) {
+    throw new Error(
+      `Invalid ServiceNow profile name '${value}'`,
+    );
+  }
+
+  return profile;
+}
+
+function profileEnv(
+  profile: string,
+  suffix: string,
+): string | undefined {
+  const scopedName =
+    `SN_${profile.toUpperCase()}_${suffix}`;
+  const scoped = env(scopedName);
+
+  if (scoped !== undefined) {
+    return scoped.trim();
+  }
+
+  if (profile === defaultProfileName()) {
+    return env(`SN_${suffix}`)?.trim();
+  }
+
+  return undefined;
+}
+
+function requiredProfileEnv(
+  profile: string,
+  suffix: string,
+): string {
+  const value = profileEnv(profile, suffix);
+
+  if (value) return value;
+
+  const scopedName =
+    `SN_${profile.toUpperCase()}_${suffix}`;
+
+  throw new Error(
+    `Missing required environment variable: ${scopedName}`,
+  );
+}
+
+function profileEnvFlag(
+  profile: string,
+  suffix: string,
+): boolean {
+  const value = profileEnv(profile, suffix);
+
+  return value === undefined
+    ? false
+    : /^(1|true|yes|on)$/i.test(value);
+}
+
+function valueSet(
+  value: string | string[] | undefined,
+): Set<string> {
+  return Array.isArray(value)
+    ? new Set(
+        value
+          .map((item) => item.trim())
+          .filter(Boolean),
+      )
+    : csvSet(value);
+}
+
+function instanceOrigin(
+  value: string | undefined,
+): string | null {
+  if (!value) return null;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
 }
