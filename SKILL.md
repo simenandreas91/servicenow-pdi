@@ -43,12 +43,26 @@ Do not call the live tools for a purely conceptual question or static code revie
 
 Use tools in this order:
 
-- **MCP first:** narrow record reads, table shape, and guarded single-record writes.
-- **Local helpers only for a genuine MCP gap:** update-set context/capture, compact server-side verification, cached inventory, delta, export, or advanced diagnostics. Pass an explicit mapped profile/base URL and prove the resulting target; otherwise do not run the helper. Verify important results through a fresh MCP read.
+- **MCP first:** narrow record reads, table shape, atomic development-context switching/restoration, update-capture checks, and guarded single-record writes.
+- **Local helpers only for a genuine MCP gap:** compact server-side verification, cached inventory, delta, export, or advanced diagnostics. Do not use local PowerShell helpers for development context or ordinary update-capture checks. Pass an explicit mapped profile/base URL and prove the resulting target; otherwise do not run the helper. Verify important results through a fresh MCP read.
 - **Browser/UI only when the channel matters:** rendering, impersonation, builders, publication, plugin/Store setup, authentication, or interaction that APIs cannot prove.
 - **Official docs only when needed:** release-sensitive or uncertain behavior; prefer first-party documentation and inspect the live instance as the final authority for its configuration.
 
 Keep calls cheap: use exact encoded queries, explicit fields, `display_value=false` unless display text is needed, and the smallest useful limit. Inspect table shape once before an unfamiliar write. Read a target once, retain its sys_id for the task, stop discovery when the controlling artifact is proven, and avoid broad inventories or screenshots unless they answer a real question.
+
+## Single-Record Configuration Fast Path
+
+Use this fast path only when the same non-production profile has already passed health in the current task, the user requested implementation, the exact existing configuration record is known, and the change is one reversible field with no security, business-data, external-effect, protected-artifact, or multi-record impact.
+
+1. Reuse the current task's profile list and health result unless the target changed, the connection failed, or more than 15 minutes have passed.
+2. Read the exact target once and retain its sys_id, before value, scope/package, and expected `sys_update_xml.name`.
+3. Call `servicenow_set_update_set_context` with the technical scope name or scope sys_id and exactly one of an existing update-set sys_id or a new update-set name. Do not create a scoped update set manually: the atomic tool sets `apps.current_app` first, validates the selected set, verifies all three preferences, and returns the rollback snapshot.
+4. Patch only the intended field on the retained sys_id.
+5. Re-read the record and call `servicenow_confirm_update_capture`, preferably in parallel, with the expected application and customer-update name.
+6. Verify the real UI when rendering or interaction is part of acceptance. If no browser channel is available, state the structural evidence and that limitation immediately rather than spending time on alternate browser setup.
+7. Call `servicenow_restore_development_context` with the exact snapshot returned by the setter, then confirm restoration succeeded.
+
+Exit the fast path and use the full operating loop if the scope or update set does not match, capture is absent or mixed, the target broadens beyond one record/field, or any security, runtime data, external side effect, protected ownership, builder-only behavior, or ambiguous target appears.
 
 ## Fast Operating Loop
 
@@ -92,9 +106,9 @@ Do not hand-edit Flow snapshots, compiled UI Builder/Workspace metadata, protect
 
 Preserve the application's existing promotion model. Do not force ineligible data into `sys_update_xml`.
 
-For update-set work, resolve the artifact's real application scope first. For a new artifact, derive scope from the owned extension application, target table/application access, related artifacts, and agreed delivery context; never default to Global for convenience. Reuse an existing set only when the candidate is unique, local, **In progress**, owned/usable by the integration context, and its application matches the artifact scope. Otherwise stop and resolve the mismatch. Use one child update set per application scope and verify the current context for the authenticated integration user immediately before writes.
+For update-set work, resolve the artifact's real application scope first. For a new artifact, derive scope from the owned extension application, target table/application access, related artifacts, and agreed delivery context; never default to Global for convenience. Reuse an existing set only when the candidate is unique, local, **In progress**, owned/usable by the integration context, and its application matches the artifact scope. Otherwise stop and resolve the mismatch. Use one child update set per application scope. Prefer `servicenow_set_update_set_context` and retain its profile/instance/user-bound rollback snapshot; it sets the current application before creating a scoped update set and then verifies `apps.current_app`, `updateSetForScope<scope_sys_id>`, and `sys_update_set` before returning.
 
-Afterward, verify `sys_update_xml` target, payload freshness, application, update set, absence of `Default` leakage, and absence of unrelated/mixed-scope noise. If a Table API write did not capture and no safe purpose-built capture helper is available for that profile, use the supported form/Studio/builder channel or report that delivery is incomplete; never edit or fabricate update XML payloads. Do not mark the update set complete until runtime tests pass.
+Afterward, use `servicenow_confirm_update_capture` to verify the `sys_update_xml` target, application, update set, absence of missing expected names, and absence of unrelated/mixed-scope noise; inspect payload freshness separately when code or markup changed. If a Table API write did not capture and no safe purpose-built capture helper is available for that profile, use the supported form/Studio/builder channel or report that delivery is incomplete; never edit or fabricate update XML payloads. Restore with `servicenow_restore_development_context` using the exact snapshot returned by the setter. Do not mark the update set complete until runtime tests pass.
 
 ## Safety And Rollback
 

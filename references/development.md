@@ -64,14 +64,14 @@ Use this flow when the user explicitly asks to create/update a story, asks for s
    - Set `sys_update_set.application` to the target `sys_scope.sys_id`.
    - If the work touches multiple scopes, create a separate update set in each scope and switch the current scoped update set before editing records in that scope.
 4. Make the update set current like a developer would.
-   - Prefer `scripts/Set-ServiceNowUpdateSetContext.ps1` with `-SnapshotPath` to create/switch context and preserve preferences.
-   - Restore preferences with `scripts/Restore-ServiceNowPreferenceSnapshot.ps1` before handoff.
-   - If doing it manually, set `apps.current_app`, `updateSetForScope<sys_scope.sys_id>`, and `sys_update_set`, then re-check before writes.
+   - Call `servicenow_set_update_set_context` with the technical scope and either an existing update-set sys_id or a new name. Retain the returned rollback snapshot unchanged.
+   - The operation sets `apps.current_app` before creating a scoped update set, then verifies `apps.current_app`, `updateSetForScope<sys_scope.sys_id>`, and `sys_update_set` atomically.
+   - Restore preferences with `servicenow_restore_development_context` and the exact returned snapshot before handoff.
 5. Implement the smallest scoped change that satisfies the story.
    - Clone baseline artifacts before modifying behavior when the baseline record is ServiceNow-owned.
    - Keep original records unchanged unless the request explicitly asks to modify them.
 6. Verify update capture before functional testing.
-   - Prefer `scripts/Confirm-ServiceNowUpdateCapture.ps1` for the target update set and affected records.
+   - Call `servicenow_confirm_update_capture` for the target update set, expected application, and expected customer-update names.
    - Group captured `sys_update_xml` rows by their `application` field, not just by update set. A deployment update set should contain customer updates for one application scope only.
    - If one story touches multiple scopes, create sibling update sets with the same story name in each `sys_update_xml.application` scope and move each customer update row to the matching scoped update set.
    - Confirm the captured payload contains the latest script, markup, or marker string.
@@ -133,11 +133,12 @@ Sources:
 ## Update Sets
 
 - Always identify the original artifact's `sys_scope` before creating an update set. Create the update set in that same application scope when cloning or modifying scoped artifacts.
-- To make an update set current for a scoped app through API automation, set two `sys_user_preference` records for the developer user:
+- Use `servicenow_set_update_set_context` rather than manipulating preferences or creating scoped update sets directly. It snapshots and verifies all three preferences:
   - `apps.current_app = <sys_scope.sys_id>`
   - `updateSetForScope<sys_scope.sys_id> = <sys_update_set.sys_id>`
-- Normal Table API creation can still inherit the developer's current app scope even when an `application` value is supplied. Always verify `sys_update_set.application` after creating a scoped update set; if it is wrong, set the current app preference before recreating it or use a constrained admin/Xplore correction for the update-set record.
-- Table API inserts/patches can update records without reliably creating `sys_update_xml` entries in the intended update set. Prefer `scripts/Confirm-ServiceNowUpdateCapture.ps1`; manually verify with:
+  - `sys_update_set = <sys_update_set.sys_id>`
+- Normal Table API creation can inherit the developer's current app scope even when an `application` value is supplied. The atomic context setter prevents this by setting the current app before creation, validating the resulting update-set application/state, and rolling back automatically if setup fails.
+- Table API inserts/patches can update records without reliably creating `sys_update_xml` entries in the intended update set. Use `servicenow_confirm_update_capture`; the manual verification query remains:
 
 ```text
 update_set=<sys_update_set.sys_id>

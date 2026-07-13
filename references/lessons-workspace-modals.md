@@ -218,7 +218,7 @@ script_condition = current.canWrite() && current.state.canWrite() && current.u_o
   ```powershell
   Save-ServiceNowCustomerUpdate.ps1 -Table sys_ui_section -SysId <section_sys_id> -UpdateSetSysId <update_set_sys_id>
   ```
-- Confirm every update set with `Confirm-ServiceNowUpdateCapture.ps1` or `Get-ServiceNowUpdateSetSummary.ps1`.
+- Confirm every update set with `servicenow_confirm_update_capture`; use `Get-ServiceNowUpdateSetSummary.ps1` only when the broader noise/type summary is needed.
 
 ## Scoped Ajax Bridge
 

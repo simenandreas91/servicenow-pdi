@@ -1,6 +1,6 @@
 {
   "name": "servicenow-pdi",
-  "version": "2.0.0",
+  "version": "2.0.0+codex.20260713123639",
   "description": "Develop safely across configured ServiceNow instances through guarded MCP tools and an OOTB-first engineering workflow.",
   "author": {
     "name": "Simen Andreas",

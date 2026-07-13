@@ -36,7 +36,7 @@ Durable notes for Simen's `x_personellsikkerh` Personellsikkerhet app on PDI `de
 - Creating dictionary fields through Table API may also create a `sys_ui_element` and a form-layout customer update. Remove a purely technical tracking field from the form layout if users should not see it, and delete unintended form-layout update XML from the delivery update set.
 - Xplore/Table API tests in scoped apps can create `sys_scope_privilege` update XML noise. Remove unintended cross-scope privilege customer updates from the delivery update set before final handoff.
 - `sysauto_script` records sometimes do not capture automatically. Use `Save-ServiceNowCustomerUpdate.ps1 -Table sysauto_script -SysId <id> -UpdateSetSysId <update_set>` when the scheduled job is a legitimate deliverable.
-- `Set-ServiceNowUpdateSetContext.ps1 -Name <same name>` creates a new update set; it does not select an existing one by name. When returning to an already-created update set, pass `-UpdateSetSysId <sys_id>` to avoid empty duplicate update sets.
+- `servicenow_set_update_set_context` creates a new update set when given `name`; it selects an existing one only when given `update_set_sys_id`. Resolve and pass the existing sys_id when continuing work to avoid empty duplicates.
 - For behavior tests, use constrained demo records and restore changed field values. Delete test `sys_email` records left in `send-ready` state after verification when the email itself is not a deliverable.
 
 ## Demo Data Marker

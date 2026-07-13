@@ -23,7 +23,7 @@ For enterprise delivery, official guidance prefers Git/source control + Applicat
 
 ## Golden Path
 
-1. Run `Get-ServiceNowPdiHealth.ps1` and capture current scope/update-set context before creating anything.
+1. Run `servicenow_health`, then read and retain the current development context before creating anything.
 2. Decide whether this is truly a custom app. State why OOTB/configuration is insufficient.
 3. Name the app, scope, and package intentionally:
    - app name: business-readable, durable
@@ -35,7 +35,7 @@ For enterprise delivery, official guidance prefers Git/source control + Applicat
    - Create **App > On your own** for pro-code scoped work.
    - Use **Scoped** unless the app must intentionally live in Global.
    - Define at least one role; Studio requires a role before continuing.
-5. Set a dedicated scoped update set with `Set-ServiceNowUpdateSetContext.ps1`.
+5. Set a dedicated scoped update set with `servicenow_set_update_set_context` and retain its rollback snapshot.
 6. Build data first:
    - Choose whether to extend an existing table such as `task` or create a standalone table.
    - Add only required fields for the first vertical slice.

@@ -93,7 +93,7 @@ Use this path when a consumer needs a controlled ServiceNow endpoint instead of 
 
 2. Prepare update-set context.
    - Run PDI health, choose the owning application, snapshot preferences, and create one update set in that scope.
-   - For Global practice APIs, use `Set-ServiceNowUpdateSetContext.ps1 -Scope global`.
+   - For Global practice APIs, call `servicenow_set_update_set_context` with `scope=global`.
 
 3. Create records in this order.
    - `sys_ws_definition`: parent API. Required fields include `name` and `service_id`; set `consumes` and `produces` deliberately, usually `application/json`.

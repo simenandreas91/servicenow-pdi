@@ -82,7 +82,7 @@ An MCP is not suitable for ServiceNow implementation writes unless it can suppor
 6. restore preferences.
 7. provide enough evidence for rollback.
 
-If it cannot do these, use `Set-ServiceNowUpdateSetContext.ps1`, `Invoke-ServiceNowTable.ps1`, `Invoke-ServiceNowXploreScript.ps1`, `Confirm-ServiceNowUpdateCapture.ps1`, and `Restore-ServiceNowPreferenceSnapshot.ps1` instead.
+The bundled MCP provides these through `servicenow_set_update_set_context`, guarded record writes, `servicenow_confirm_update_capture`, and `servicenow_restore_development_context`. Use local Table/Xplore helpers only for a remaining operation the MCP cannot express, not for context management.
 
 ## Acceptable Uses
 

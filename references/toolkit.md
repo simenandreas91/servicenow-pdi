@@ -2,6 +2,8 @@
 
 Small PowerShell toolkit for faster, less noisy ServiceNow discovery. All scripts live in `scripts/` and wrap the existing Table API/Xplore helpers.
 
+Development-context switching, rollback, and ordinary update-capture checks are MCP-native. Use `servicenow_set_update_set_context`, `servicenow_restore_development_context`, and `servicenow_confirm_update_capture`; do not route those operations through local PowerShell helpers.
+
 Most scripts support:
 - `-Profile`
 - `-EnvPath`

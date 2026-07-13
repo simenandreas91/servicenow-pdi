@@ -31,16 +31,16 @@ Use this instance-specific file only after the core skill. It captures dated Vå
 - A dated sandbox test succeeded after `snc_basic_auth_api_access` was granted. Re-verify through a dedicated sandbox profile; do not reuse a DEV profile with a host override.
 - Xplore is available in DEV after Xplore: Developer Toolkit 5.02 was installed. Prefer Xplore for compact read-only verification and constrained behavior checks.
 - For Vår General Inquiry catalog client scripts, the record producer is `General Inquiry` (`sc_cat_item_producer=27c78de49f331200d9011977677fcfb3`) in Employee Center Core, and the Category select variable is `what_is_the_inquiry_about` (`item_option_new=638da54421418f10d8cb70a2b1956aa7`, client-script `cat_variable=IO:638da54421418f10d8cb70a2b1956aa7`). In DEV on 2026-06-26, Table API create/PATCH ignored `catalog_script_client.cat_variable`; a constrained GlideRecord update set the binding and captured it correctly.
-- Resolve the current DEV integration user by stable `user_name` and pass its live sys_id to `Set-ServiceNowUpdateSetContext.ps1`; never copy a dated user sys_id across profiles.
-- Restore developer preferences after each implementation and remove local `.sn-pref-snapshot-*` files created for the story.
+- Let `servicenow_set_update_set_context` bind its snapshot to the authenticated integration user returned by health; never copy a dated user sys_id across profiles.
+- Restore developer preferences after each implementation with `servicenow_restore_development_context` and the exact returned snapshot.
 - If HR Core portal submit reports `Access to api 'setWorkflow'` and the refusal names table scope `Enterprise Service Management Integrations Framework`, a cross-scope privilege is not sufficient because the API policy requires the caller scope to match the table scope. In DEV on 2026-05-29 the practical fix was to patch HR Core `hr_Utils.updateUserMismatchField()` so it only calls `setWorkflow(false)` when the target table is in `sn_hr_core`; the General Inquiry producer then submitted successfully while `sn_hr_core_job` remained owned by `sn_hr_integr_fw`.
 - In Xplore/GlideRecord probes on Vår Energi DEV, boolean fields may return `1`/`0` from `getValue()` even when Table API displays `true`/`false`; normalize both forms before deciding whether HR Services or record producers are active.
 
 ## Update Set Practice
 
 - Create one update set per story and per application scope.
-- If the user names an existing story update set or asks to continue prior work, query `sys_update_set` by story prefix first and switch to that exact record with `Set-ServiceNowUpdateSetContext.ps1 -UpdateSetSysId <sys_id>`. Do not create a replacement update set just because the requirement changed.
-- Confirm update capture with `Get-ServiceNowUpdateSetSummary.ps1`.
+- If the user names an existing story update set or asks to continue prior work, query `sys_update_set` by story prefix first and switch to that exact record with `servicenow_set_update_set_context(update_set_sys_id=<sys_id>)`. Do not create a replacement update set just because the requirement changed.
+- Confirm update capture with `servicenow_confirm_update_capture`; use `Get-ServiceNowUpdateSetSummary.ps1` only for a broader inventory/noise review.
 - If update XML rows appear under `global`, inspect payload scope/package before doing anything else; earlier Document Templates work captured payloads with correct scoped app metadata even when update-row metadata needed cleanup.
 - For HR Core story work, resolve scope/application `Human Resources: Core` (`sn_hr_core`) live in the target profile; do not rely on a stored scope sys_id.
 - For Document Templates story work, use scope/application `Document Templates` (`sn_doc`). Resolve the app sys_id in the target instance before switching scopes.
@@ -55,7 +55,7 @@ Use this runbook:
 1. Load this file and confirm the target instance/profile. For remote MCP work use `varenergi_dev`; for a local helper use only a separately configured profile that health-checks to the exact DEV URL.
 2. Query `sys_update_set` by story prefix, e.g. `nameLIKESTRY0010045`, with fields `sys_id,name,application,state,parent,base_update_set,sys_created_on`.
 3. Identify whether a batch already exists. Prefer an exact batch name of `<story> - Batch`, for example `STRY0010045 - Batch`.
-4. If no batch exists, create it as a Global update set named `<story> - Batch`. If Table API creation follows the user's current application preference instead of Global, snapshot preferences, switch to Global with `Set-ServiceNowUpdateSetContext.ps1`, then correct the batch application. If PATCH cannot change `application`, use a constrained Xplore script in Global to set `sys_update_set.application='global'`, then read back to verify.
+4. If no batch exists, create it atomically with `servicenow_set_update_set_context(scope=global, name=<story> - Batch)`. Retain the snapshot, read back `application=global`, and restore the prior context after parenting is complete.
 5. Select child update sets deliberately:
    - Include story delivery update sets for the requested story.
    - Exclude the batch record itself.
@@ -63,7 +63,7 @@ Use this runbook:
    - If multiple ambiguous story prefixes are present, stop and ask which records should be included.
 6. PATCH each child `sys_update_set` by `sys_id` with `parent=<batch_sys_id>`. ServiceNow should also populate `base_update_set` to the same batch.
 7. Verify with a fresh read: query `sys_update_set` where `parent=<batch_sys_id>` and confirm every intended child has both `parent` and `base_update_set` pointing to the batch.
-8. If developer preferences were changed, restore the snapshot and remove the local `.sn-pref-snapshot-*` file.
+8. If developer preferences were changed, restore them with `servicenow_restore_development_context` and the exact MCP snapshot.
 9. Final response should include the batch name/sys_id/application, the child update set names linked, verification of `parent` and `base_update_set`, and whether preferences were restored.
 
 Core commands:

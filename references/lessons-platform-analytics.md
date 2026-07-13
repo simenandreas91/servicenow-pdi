@@ -4,7 +4,7 @@ Use this when creating or modifying Platform Analytics dashboards (`par_dashboar
 
 ## Fast Workflow
 
-1. Resolve the intended update set by `sys_id`, not only by name. `Set-ServiceNowUpdateSetContext.ps1 -Name` creates a new update set; use `-UpdateSetSysId` when continuing an existing one.
+1. Resolve the intended update set by `sys_id`, not only by name. `servicenow_set_update_set_context` creates a new set when given `name`; pass `update_set_sys_id` when continuing an existing one.
 2. Inspect a known-good dashboard's captured `sys_update_xml` rows first. For Platform Analytics, the payload reveals the exact `component_props` JSON that the builder saves.
 3. When modifying a workspace-generated dashboard, reuse the existing `par_dashboard`, `par_dashboard_tab`, and tab canvas. The workspace scaffold may already have a small default widget set; update those widgets by `sys_id` and add only the missing widgets by stable `name`.
 4. Create or reuse these records in Global unless the inspected dashboard or existing workspace scope proves otherwise:
@@ -17,7 +17,7 @@ Use this when creating or modifying Platform Analytics dashboards (`par_dashboar
    - `par_dashboard_widget` per visualization
 5. Put widgets on the tab canvas, not the base canvas.
 6. Verify with Xplore by parsing every widget's `component_props`, counting widgets via `canvas.dashboard`, and running matching `GlideAggregate` checks for KPI filters.
-7. For a generated workspace update set, a broad `Confirm-ServiceNowUpdateCapture.ps1` may report pre-existing mixed-scope rows. Narrow-check dashboard rows in `sys_update_xml` by `nameSTARTSWITHpar_dashboard` and by widget `target_nameLIKE<stable prefix>`.
+7. For a generated workspace update set, `servicenow_confirm_update_capture` may report pre-existing mixed-scope rows. Narrow-check dashboard rows in `sys_update_xml` by `nameSTARTSWITHpar_dashboard` and by widget `target_nameLIKE<stable prefix>`.
 8. Restore preferences.
 
 ## Success Dashboard Apps
@@ -325,7 +325,7 @@ Useful `sys_user` encoded queries:
 
 ## Pitfalls
 
-- Do not pass only `-Name` to `Set-ServiceNowUpdateSetContext.ps1` when the user named an existing update set; it will create a duplicate. Resolve and pass `-UpdateSetSysId`.
+- Do not pass `name` to `servicenow_set_update_set_context` when the user named an existing update set; resolve and pass `update_set_sys_id` or a duplicate will be created.
 - Do not create duplicate dashboards if a script partially succeeds. Re-run idempotently: find the dashboard by exact name, find existing tab/canvases/metadata/permission/visibility, and only add missing widgets when `par_dashboard_widget` count is zero.
 - For existing workspace dashboards, do not require widget count to be zero before proceeding. Repurpose known starter widgets by `sys_id`, then upsert new named widgets so reruns converge.
 - Table shape helpers may report `create_access=false` on some `par_` tables, but admin/Xplore can still insert the builder-owned records. Keep writes narrow and verify capture immediately.
