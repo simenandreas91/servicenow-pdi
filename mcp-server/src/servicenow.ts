@@ -6,6 +6,8 @@ type FetchLike = typeof fetch;
 const TABLE_RE = /^[A-Za-z0-9_]+$/;
 const FIELD_RE = /^[A-Za-z0-9_]+$/;
 const SYS_ID_RE = /^[0-9a-f]{32}$/i;
+const SCOPE_RE = /^(global|[a-z][a-z0-9_]{0,79})$/;
+const XPLORE_SCRIPT_MAX_LENGTH = 20_000;
 
 const BLOCKED_TABLES = new Set([
   "oauth_credential",
@@ -39,6 +41,7 @@ export interface ServiceNowOptions {
   fetchImpl?: FetchLike;
   writeEnabled?: boolean;
   deleteEnabled?: boolean;
+  xploreEnabled?: boolean;
   writeTables?: string | string[];
   deleteTables?: string | string[];
   additionalBlockedTables?: string | string[];
@@ -52,6 +55,7 @@ export interface ServiceNowProfileSummary {
   configured: boolean;
   write_enabled: boolean;
   delete_enabled: boolean;
+  xplore_enabled: boolean;
 }
 
 export interface TableShapeOptions {
@@ -65,6 +69,7 @@ export class ServiceNowClient {
   readonly instance: URL;
   readonly writeEnabled: boolean;
   readonly deleteEnabled: boolean;
+  readonly xploreEnabled: boolean;
 
   private readonly username: string;
   private readonly password: string;
@@ -111,6 +116,10 @@ export class ServiceNowClient {
     this.deleteEnabled =
       options.deleteEnabled ??
       profileEnvFlag(this.profile, "DELETE_ENABLED");
+
+    this.xploreEnabled =
+      options.xploreEnabled ??
+      profileEnvFlag(this.profile, "XPLORE_ENABLED");
 
     this.writeTables = valueSet(
       options.writeTables ??
@@ -318,7 +327,294 @@ export class ServiceNowClient {
       authenticated_user: users[0] ?? null,
       write_enabled: this.writeEnabled,
       delete_enabled: this.deleteEnabled,
+      xplore_enabled: this.xploreEnabled,
     };
+  }
+
+  async executeXplore(
+    script: string,
+    scope = "global",
+  ): Promise<JsonObject> {
+    this.requireXploreAccess();
+    const code = script.trim();
+
+    if (!code) {
+      throw new ServiceNowError(
+        "script must not be empty",
+        400,
+      );
+    }
+
+    if (code.length > XPLORE_SCRIPT_MAX_LENGTH) {
+      throw new ServiceNowError(
+        `script exceeds ${XPLORE_SCRIPT_MAX_LENGTH} characters`,
+        400,
+      );
+    }
+
+    if (!SCOPE_RE.test(scope)) {
+      throw new ServiceNowError(
+        "scope must be global or a technical application scope name",
+        400,
+      );
+    }
+
+    validateXploreScript(code);
+    return this.runXplore(code, scope);
+  }
+
+  async saveCustomerUpdate(
+    table: string,
+    sysId: string,
+    updateSetSysId: string,
+  ): Promise<JsonObject> {
+    this.requireXploreAccess();
+    this.validateTable(table);
+    this.validateSysId(sysId);
+    this.validateSysId(updateSetSysId);
+    this.requireWriteAccess(table);
+    this.requireWriteAccess("sys_update_xml");
+
+    const [record, updateSet] = await Promise.all([
+      this.get(
+        table,
+        sysId,
+        [
+          "sys_id",
+          "sys_class_name",
+          "sys_updated_on",
+          "sys_updated_by",
+        ],
+      ),
+      this.get(
+        "sys_update_set",
+        updateSetSysId,
+        ["sys_id", "name", "state", "application"],
+        "all",
+      ),
+    ]);
+
+    if (!record) {
+      throw new ServiceNowError(
+        `Record '${table}:${sysId}' was not found`,
+        404,
+      );
+    }
+
+    if (!updateSet) {
+      throw new ServiceNowError(
+        `Update set '${updateSetSysId}' was not found`,
+        404,
+      );
+    }
+
+    if (tableApiScalar(updateSet.state)?.toLowerCase() !== "in progress") {
+      throw new ServiceNowError(
+        "Update set must be in progress",
+        409,
+      );
+    }
+
+    const updateName = `${table}_${sysId}`;
+    const xplore = await this.runXplore(
+      buildCustomerUpdateScript(
+        table,
+        sysId,
+        updateSetSysId,
+        updateName,
+      ),
+      "global",
+    );
+    const xploreResult = xplore.result;
+
+    if (
+      !xploreResult ||
+      typeof xploreResult !== "object" ||
+      Array.isArray(xploreResult) ||
+      (xploreResult as JsonObject).saved !== true
+    ) {
+      throw new ServiceNowError(
+        "Xplore did not confirm that the source record was saved",
+        409,
+        xplore,
+      );
+    }
+
+    const captured = await this.query("sys_update_xml", {
+      query:
+        `name=${updateName}` +
+        `^update_set=${updateSetSysId}` +
+        "^ORDERBYDESCsys_created_on",
+      fields: [
+        "sys_id",
+        "name",
+        "update_set",
+        "application",
+        "target_name",
+        "type",
+        "sys_created_on",
+      ],
+      limit: 1,
+      displayValue: "all",
+    });
+
+    if (!captured[0]) {
+      throw new ServiceNowError(
+        `Customer update '${updateName}' was not captured in the requested update set`,
+        409,
+        xplore,
+      );
+    }
+
+    const updateSetApplication = tableApiScalar(
+      updateSet.application,
+    );
+    const capturedApplication = tableApiScalar(
+      captured[0].application,
+    );
+
+    if (
+      updateSetApplication &&
+      capturedApplication !== updateSetApplication
+    ) {
+      throw new ServiceNowError(
+        `Customer update application '${capturedApplication ?? "unknown"}' does not match update set application '${updateSetApplication}'`,
+        409,
+        captured[0],
+      );
+    }
+
+    return {
+      saved: true,
+      profile: this.profile,
+      table,
+      sys_id: sysId,
+      source_record: record,
+      update_set: updateSet,
+      customer_update: captured[0],
+      xplore,
+    };
+  }
+
+  private async runXplore(
+    script: string,
+    scope: string,
+  ): Promise<JsonObject> {
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(),
+      30_000,
+    );
+    const payload = new URLSearchParams({
+      data: JSON.stringify({
+        debug_mode: false,
+        target: "server",
+        scope,
+        code: script,
+        user_data: "",
+        user_data_type: "String",
+        breadcrumb: "",
+        no_quotes: true,
+        show_props: false,
+        max_depth: 1,
+        show_strings: true,
+        html_messages: false,
+        fix_gslog: true,
+        support_hoisting: false,
+        use_es_latest: false,
+        id: "codex",
+        loaded_id: "",
+      }),
+    });
+
+    try {
+      const response = await this.fetchImpl(
+        new URL("/snd_xplore.do?action=run", this.instance),
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            Accept: "application/json",
+            Authorization:
+              `Basic ${Buffer.from(
+                `${this.username}:${this.password}`,
+              ).toString("base64")}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "Codex-ServiceNow-PDI/2.0",
+          },
+          body: payload.toString(),
+        },
+      );
+      const text = await response.text();
+
+      if (text.length > 1_000_000) {
+        throw new ServiceNowError(
+          "Xplore response exceeded the maximum size",
+          502,
+        );
+      }
+
+      const parsed = text ? safeJson(text) : null;
+
+      if (!response.ok) {
+        throw new ServiceNowError(
+          `Xplore returned HTTP ${response.status}`,
+          response.status,
+          redact(parsed),
+        );
+      }
+
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        Array.isArray(parsed)
+      ) {
+        throw new ServiceNowError(
+          "Xplore did not return a JSON object",
+          502,
+        );
+      }
+
+      const responseObject = parsed as JsonObject;
+
+      if (responseObject.$success !== true) {
+        throw new ServiceNowError(
+          "Xplore execution failed",
+          502,
+          redact(
+            responseObject.$error ??
+            responseObject.error ??
+            "Unknown Xplore error",
+          ),
+        );
+      }
+
+      return extractXploreResult(responseObject);
+    } catch (error) {
+      if (error instanceof ServiceNowError) {
+        throw error;
+      }
+
+      if (
+        error instanceof Error &&
+        error.name === "AbortError"
+      ) {
+        throw new ServiceNowError(
+          "Xplore execution timed out",
+          504,
+        );
+      }
+
+      throw new ServiceNowError(
+        "Xplore execution failed",
+        502,
+        error instanceof Error
+          ? error.message
+          : String(error),
+      );
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async query(
@@ -421,16 +717,7 @@ export class ServiceNowClient {
     table: string,
     record: JsonObject,
   ): Promise<JsonObject> {
-    this.validateTable(table);
-
-    if (!this.writeEnabled) {
-      throw new ServiceNowError(
-        "ServiceNow writes are disabled",
-        403,
-      );
-    }
-
-    this.validateTablePermission(table, "write");
+    this.requireWriteAccess(table);
     this.validateWrite(record);
 
     const payload = await this.request(
@@ -449,17 +736,8 @@ export class ServiceNowClient {
     sysId: string,
     record: JsonObject,
   ): Promise<JsonObject> {
-    this.validateTable(table);
     this.validateSysId(sysId);
-
-    if (!this.writeEnabled) {
-      throw new ServiceNowError(
-        "ServiceNow writes are disabled",
-        403,
-      );
-    }
-
-    this.validateTablePermission(table, "write");
+    this.requireWriteAccess(table);
     this.validateWrite(record);
 
     const payload = await this.request(
@@ -499,6 +777,35 @@ export class ServiceNowClient {
       table,
       sys_id: sysId,
     };
+  }
+
+  private requireWriteAccess(table: string): void {
+    this.validateTable(table);
+
+    if (!this.writeEnabled) {
+      throw new ServiceNowError(
+        "ServiceNow writes are disabled",
+        403,
+      );
+    }
+
+    this.validateTablePermission(table, "write");
+  }
+
+  private requireXploreAccess(): void {
+    if (!this.writeEnabled) {
+      throw new ServiceNowError(
+        "ServiceNow writes are disabled",
+        403,
+      );
+    }
+
+    if (!this.xploreEnabled) {
+      throw new ServiceNowError(
+        "ServiceNow Xplore execution is disabled for this profile",
+        403,
+      );
+    }
   }
 
   async removeTemporaryUserPreference(
@@ -642,8 +949,105 @@ export function listServiceNowProfiles(): ServiceNowProfileSummary[] {
       configured: Boolean(origin && username && password),
       write_enabled: profileEnvFlag(profile, "WRITE_ENABLED"),
       delete_enabled: profileEnvFlag(profile, "DELETE_ENABLED"),
+      xplore_enabled: profileEnvFlag(profile, "XPLORE_ENABLED"),
     };
   });
+}
+
+function validateXploreScript(script: string): void {
+  const blocked = [
+    /\b(deleteRecord|deleteMultiple|setWorkflow|autoSysFields|gs\.sleep)\s*\(/i,
+    /\b(RESTMessageV2|SOAPMessageV2|GlideEncrypter|Password2)\b/i,
+    /\b(gs\.getProperty|SNC\.CredentialStore)\s*\(/i,
+    /\b(oauth_credential|sys_auth_profile_basic|sys_user_token|sys_certificate|sys_credentials)\b/i,
+  ];
+
+  if (blocked.some(pattern => pattern.test(script))) {
+    throw new ServiceNowError(
+      "Xplore script contains a blocked high-risk API or table",
+      403,
+    );
+  }
+}
+
+function buildCustomerUpdateScript(
+  table: string,
+  sysId: string,
+  updateSetSysId: string,
+  updateName: string,
+): string {
+  return `(function () {
+  var result = { saved: false, name: '${updateName}', update_set: '${updateSetSysId}' };
+  var currentSet = gs.getUser().getPreference('sys_update_set');
+  if (currentSet !== '${updateSetSysId}') {
+    result.error = 'wrong_update_set_context';
+    result.current_update_set = currentSet || '';
+    gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
+    return;
+  }
+  var gr = new GlideRecord('${table}');
+  if (!gr.get('${sysId}')) {
+    result.error = 'record_not_found';
+    gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
+    return;
+  }
+  new GlideUpdateManager2().saveRecord(gr);
+  result.saved = true;
+  gs.print('SN_RESULT_START' + JSON.stringify(result) + 'SN_RESULT_END');
+})();`;
+}
+
+function extractXploreResult(
+  response: JsonObject,
+): JsonObject {
+  const result = response.result;
+  const resultObject =
+    result && typeof result === "object" && !Array.isArray(result)
+      ? result as JsonObject
+      : {};
+  const candidates: string[] = [];
+  const resultText = tableApiScalar(resultObject.string);
+
+  if (resultText) candidates.push(resultText);
+
+  for (const key of ["messages", "logs"]) {
+    const entries = resultObject[key];
+
+    if (!Array.isArray(entries)) continue;
+
+    for (const entry of entries.slice(0, 20)) {
+      if (typeof entry === "string") {
+        candidates.push(entry);
+      } else if (
+        entry &&
+        typeof entry === "object" &&
+        !Array.isArray(entry)
+      ) {
+        const message = tableApiScalar(
+          (entry as JsonObject).message,
+        );
+        if (message) candidates.push(message);
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    const match = /(?:SN_RESULT_START|CODEX_RESULT_START)\s*([\s\S]*?)\s*(?:SN_RESULT_END|CODEX_RESULT_END)/
+      .exec(candidate);
+
+    if (match?.[1]) {
+      return {
+        result: redact(safeJson(match[1].trim())),
+        scope_output: "marked",
+      };
+    }
+  }
+
+  return {
+    result: redact(resultText?.slice(0, 8_000) ?? null),
+    messages: candidates.slice(0, 20).map(item => item.slice(0, 1_000)),
+    scope_output: "unmarked",
+  };
 }
 
 function safeJson(text: string): unknown {

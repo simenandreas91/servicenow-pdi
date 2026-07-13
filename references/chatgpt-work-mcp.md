@@ -13,11 +13,17 @@ The server exposes:
 - `servicenow_query_records`
 - `servicenow_get_record`
 - `servicenow_table_shape`
+- `servicenow_get_development_context`
+- `servicenow_set_update_set_context`
+- `servicenow_restore_development_context`
+- `servicenow_confirm_update_capture`
+- `servicenow_execute_xplore`
+- `servicenow_save_customer_update`
 - `servicenow_create_record`
 - `servicenow_update_record`
 - `servicenow_delete_record`
 
-Credential tables are blocked, secret-like response fields are redacted, secret-like writes are rejected, reads require explicit fields and are capped at 100 records, writes target one record, and deletes require a profile-specific environment switch, a table allowlist, and an exact confirmation string. OAuth registration accepts ChatGPT callbacks and, when explicitly enabled, Codex Desktop loopback callbacks on `127.0.0.1` or `localhost`; tokens are resource-bound, and login/token endpoints are rate-limited.
+Credential tables are blocked, secret-like response fields are redacted, secret-like writes are rejected, reads require explicit fields and are capped at 100 records, writes target one record, and deletes require a profile-specific environment switch, a table allowlist, and an exact confirmation string. Xplore execution additionally requires `SN_<PROFILE>_XPLORE_ENABLED=true`, an exact profile-bound confirmation string, and passes script-size and high-risk API checks. The customer-update tool is single-record, requires exact target confirmation, checks the current update-set context in Xplore, and verifies the resulting `sys_update_xml` row. OAuth registration accepts ChatGPT callbacks and, when explicitly enabled, Codex Desktop loopback callbacks on `127.0.0.1` or `localhost`; tokens are resource-bound, and login/token endpoints are rate-limited.
 
 ## Deploy on Netlify
 
@@ -31,6 +37,7 @@ Credential tables are blocked, secret-like response fields are redacted, secret-
    - `SN_PASSWORD=<PDI password>`
    - `SN_WRITE_ENABLED=true`
    - `SN_DELETE_ENABLED=false`
+   - `SN_XPLORE_ENABLED=false`
    - `SN_WRITE_TABLES=<comma-separated tables>`
    - `SN_DELETE_TABLES=`
    - `SN_ADDITIONAL_BLOCKED_TABLES=`
@@ -40,6 +47,7 @@ Credential tables are blocked, secret-like response fields are redacted, secret-
    - `SN_VARENERGI_DEV_PASSWORD=<client API password>`
    - `SN_VARENERGI_DEV_WRITE_ENABLED=true`
    - `SN_VARENERGI_DEV_DELETE_ENABLED=false`
+   - `SN_VARENERGI_DEV_XPLORE_ENABLED=false`
    - `SN_VARENERGI_DEV_WRITE_TABLES=*`
    - `SN_VARENERGI_DEV_DELETE_TABLES=`
    - `SN_VARENERGI_DEV_ADDITIONAL_BLOCKED_TABLES=`
@@ -51,6 +59,7 @@ Credential tables are blocked, secret-like response fields are redacted, secret-
 6. Use `SN_<PROFILE>_*` for every additional profile; profile keys are uppercased in environment-variable names.
 7. Start with the smallest practical write-table list. `*` is supported for an admin-capable development profile but deliberately explicit.
 8. Keep deletes disabled and delete-table lists empty initially. Enable only the exact cleanup tables when genuinely needed.
+9. Keep Xplore disabled by default. Enable it only on the exact non-production profiles where guarded server-side execution is intentionally required.
 
 Prefer a dedicated Web service access only user for each profile. For broad development, the account may have `admin`, while the MCP server continues to block credential tables and secret-like fields. Never commit any of these values.
 

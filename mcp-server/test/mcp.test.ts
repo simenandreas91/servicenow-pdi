@@ -34,10 +34,19 @@ test("initialize and tools/list are available before OAuth", async () => {
       "servicenow_set_update_set_context",
       "servicenow_restore_development_context",
       "servicenow_confirm_update_capture",
+      "servicenow_execute_xplore",
+      "servicenow_save_customer_update",
     ].filter(name =>
       !TOOLS.some(tool => tool.name === name)
     ),
     [],
+  );
+  assert.ok(
+    TOOLS.some(
+      tool =>
+        tool.name === "servicenow_execute_xplore" &&
+        tool.annotations.destructiveHint === true,
+    ),
   );
   assert.ok(
     TOOLS.every((tool) =>
@@ -228,6 +237,7 @@ test("profile listing exposes only non-secret configuration", async () => {
           configured: true,
           write_enabled: true,
           delete_enabled: false,
+          xplore_enabled: true,
         },
       ],
     },
@@ -251,6 +261,7 @@ test("profile listing exposes only non-secret configuration", async () => {
       configured: true,
       write_enabled: true,
       delete_enabled: false,
+      xplore_enabled: true,
     },
   );
   assert.equal(
@@ -350,6 +361,114 @@ test("write tools require a profile and delete confirmation binds it", async () 
 
   assert.equal(exactConfirmation.status, 200);
   assert.equal(deleted, true);
+});
+
+test("Xplore and customer-update confirmations bind the exact profile and record", async () => {
+  let executed = false;
+  let saved = false;
+  const client = {
+    profile: "varenergi_dev",
+    executeXplore: async () => {
+      executed = true;
+      return { ok: true };
+    },
+    saveCustomerUpdate: async () => {
+      saved = true;
+      return { saved: true };
+    },
+  } as never;
+  const sourceId = "a".repeat(32);
+  const updateSetId = "b".repeat(32);
+
+  const wrongXplore = await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_execute_xplore",
+        arguments: {
+          profile: "varenergi_dev",
+          script: "gs.print('ok');",
+          confirmation: "EXECUTE XPLORE pdi",
+        },
+      },
+      46,
+      { Authorization: "Bearer valid" },
+    ),
+    { authStore: writeAuthStore(), client },
+  );
+  const wrongXploreBody = await wrongXplore.json() as {
+    result: { isError?: boolean };
+  };
+
+  assert.equal(wrongXploreBody.result.isError, true);
+  assert.equal(executed, false);
+
+  await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_execute_xplore",
+        arguments: {
+          profile: "varenergi_dev",
+          script: "gs.print('ok');",
+          confirmation: "EXECUTE XPLORE varenergi_dev",
+        },
+      },
+      47,
+      { Authorization: "Bearer valid" },
+    ),
+    { authStore: writeAuthStore(), client },
+  );
+
+  assert.equal(executed, true);
+
+  const wrongSave = await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_save_customer_update",
+        arguments: {
+          profile: "varenergi_dev",
+          table: "sn_cd_content_portal",
+          sys_id: sourceId,
+          update_set_sys_id: updateSetId,
+          confirmation:
+            `SAVE varenergi_dev sn_cd_content_portal ${sourceId} TO ${"c".repeat(32)}`,
+        },
+      },
+      48,
+      { Authorization: "Bearer valid" },
+    ),
+    { authStore: writeAuthStore(), client },
+  );
+  const wrongSaveBody = await wrongSave.json() as {
+    result: { isError?: boolean };
+  };
+
+  assert.equal(wrongSaveBody.result.isError, true);
+  assert.equal(saved, false);
+
+  await handleMcp(
+    rpc(
+      "tools/call",
+      {
+        name: "servicenow_save_customer_update",
+        arguments: {
+          profile: "varenergi_dev",
+          table: "sn_cd_content_portal",
+          sys_id: sourceId,
+          update_set_sys_id: updateSetId,
+          confirmation:
+            `SAVE varenergi_dev sn_cd_content_portal ${sourceId} TO ${updateSetId}`,
+        },
+      },
+      49,
+      { Authorization: "Bearer valid" },
+    ),
+    { authStore: writeAuthStore(), client },
+  );
+
+  assert.equal(saved, true);
 });
 
 test("table shape forwards field and choice filters", async () => {

@@ -188,6 +188,46 @@ const TOOLS: ToolDefinition[] = [
   ),
 
   tool(
+    "servicenow_execute_xplore",
+    "Execute a guarded ServiceNow Xplore script",
+    "Execute one explicitly authorized server-side Xplore script on the selected profile. Requires the profile-specific XPLORE_ENABLED gate and exact confirmation. High-risk credential, outbound, delete, workflow-bypass, and sleep APIs are blocked; use a purpose-built tool when one exists.",
+    {
+      profile: profileProperty(),
+      script: str("Server-side JavaScript to execute through Xplore"),
+      scope: scopeProperty(false),
+      confirmation: str("Must equal EXECUTE XPLORE <profile>"),
+    },
+    false,
+    ["profile", "script", "confirmation"],
+    true,
+  ),
+
+  tool(
+    "servicenow_save_customer_update",
+    "Save one ServiceNow record as a customer update",
+    "Force one explicitly authorized record into the authenticated user's current update set with GlideUpdateManager2, then verify the exact sys_update_xml row in the requested in-progress update set. Set and verify development context first; use only when the record is intentionally being transported this way.",
+    {
+      profile: profileProperty(),
+      table: str("ServiceNow source table name"),
+      sys_id: sysIdProperty("Source record sys_id"),
+      update_set_sys_id: sysIdProperty(
+        "Current in-progress update set sys_id",
+      ),
+      confirmation: str(
+        "Must equal SAVE <profile> <table> <sys_id> TO <update_set_sys_id>",
+      ),
+    },
+    false,
+    [
+      "profile",
+      "table",
+      "sys_id",
+      "update_set_sys_id",
+      "confirmation",
+    ],
+  ),
+
+  tool(
     "servicenow_create_record",
     "Create a ServiceNow record",
     "Create exactly one record through the Table API. Set application scope and update-set context first when creating configuration.",
@@ -589,6 +629,46 @@ async function callTool(
         optionalScopeArg(args, "expected_application"),
         stringArrayArg(args, "names"),
       );
+
+    case "servicenow_execute_xplore": {
+      const confirmation = `EXECUTE XPLORE ${client.profile}`;
+
+      if (stringArg(args, "confirmation") !== confirmation) {
+        throw new ServiceNowError(
+          "Xplore confirmation does not match the selected profile",
+          400,
+        );
+      }
+
+      return client.executeXplore(
+        stringArg(args, "script"),
+        optionalScopeArg(args, "scope") ?? "global",
+      );
+    }
+
+    case "servicenow_save_customer_update": {
+      const table = stringArg(args, "table");
+      const sysId = sysIdArg(args, "sys_id");
+      const updateSetSysId = sysIdArg(
+        args,
+        "update_set_sys_id",
+      );
+      const confirmation =
+        `SAVE ${client.profile} ${table} ${sysId} TO ${updateSetSysId}`;
+
+      if (stringArg(args, "confirmation") !== confirmation) {
+        throw new ServiceNowError(
+          "Customer-update confirmation does not match the exact target",
+          400,
+        );
+      }
+
+      return client.saveCustomerUpdate(
+        table,
+        sysId,
+        updateSetSysId,
+      );
+    }
 
     case "servicenow_create_record":
       return client.create(
